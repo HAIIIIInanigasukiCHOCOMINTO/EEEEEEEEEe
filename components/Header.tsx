@@ -1,7 +1,8 @@
 import React from 'react';
 import { Page, SimulationState, SimplePriceDataPoint } from '../types';
 import SimulationControls from './SimulationControls';
-import { getDateFromDay, formatDate } from '../utils/dateUtils';
+import { formatDateTime } from '../utils/dateUtils';
+import LanguageSelector from './LanguageSelector';
 
 interface HeaderProps {
     activePage: Page;
@@ -54,7 +55,7 @@ const MarketTicker: React.FC<{label: string, history: SimplePriceDataPoint[]}> =
 
 const Header: React.FC<HeaderProps> = (props) => {
     const { activePage, onNavigate, simulationState, searchQuery, onSearchChange } = props;
-    const currentDate = getDateFromDay(simulationState.day, simulationState.startDate);
+    const currentDate = new Date(simulationState.time);
 
     return (
         <header className="bg-gray-900 border-b border-gray-700 sticky top-0 z-40">
@@ -78,9 +79,9 @@ const Header: React.FC<HeaderProps> = (props) => {
                     </div>
 
                     <div className="flex items-center gap-4">
-                         <div className="text-xs text-gray-400 text-right hidden lg:block">
-                            <div>{formatDate(currentDate)}</div>
-                            <div>NeuralNet Market Time</div>
+                         <div className="text-xs text-gray-400 text-right hidden lg:block font-mono">
+                            <div>{formatDateTime(currentDate)}</div>
+                            <div className="text-gray-500">NeuralNet Market Time</div>
                         </div>
                         <SimulationControls
                             isRunning={props.isRunning}
@@ -89,6 +90,8 @@ const Header: React.FC<HeaderProps> = (props) => {
                             speed={props.speed}
                             onSpeedChange={props.onSpeedChange}
                         />
+                        <div className="h-6 w-px bg-gray-700"></div>
+                        <LanguageSelector />
                     </div>
                 </div>
             </div>

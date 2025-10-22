@@ -143,7 +143,7 @@ const generateStrategyName = (weights: Record<string, number>): string => {
     return `${primaryName}-${secondaryName} Hybrid`;
 }
 
-const generateInvestorAI = (id: string, name: string, minNeurons: number, maxNeurons: number): InvestorConfig => {
+const generateInvestorAI = (id: string, name: string, minNeurons: number, maxNeurons: number, riskRange: [number, number], learningRateRange: [number, number]): InvestorConfig => {
     const numNeurons = Math.floor(Math.random() * (maxNeurons - minNeurons + 1)) + minNeurons;
     const shuffledNeurons = [...NEURON_POOL].sort(() => 0.5 - Math.random());
     const selectedNeurons = shuffledNeurons.slice(0, numNeurons);
@@ -158,6 +158,9 @@ const generateInvestorAI = (id: string, name: string, minNeurons: number, maxNeu
         weights: weights,
     };
 
+    const [minRisk, maxRisk] = riskRange;
+    const [minLR, maxLR] = learningRateRange;
+
     return {
         id,
         name,
@@ -165,14 +168,14 @@ const generateInvestorAI = (id: string, name: string, minNeurons: number, maxNeu
         strategy: {
             strategyType: 'hyperComplex',
             network: network,
-            riskAversion: 0.8 + Math.random() * 1.7, // Random risk aversion between 0.8 and 2.5
+            riskAversion: minRisk + Math.random() * (maxRisk - minRisk),
             tradeFrequency: Math.random() * 0.4 + 0.1, // Not used in current model, but good for future use
-            learningRate: 0.005 + Math.random() * 0.015, // AI learning speed (0.005 to 0.02)
+            learningRate: minLR + Math.random() * (maxLR - minLR),
         }
     }
 };
 
-const AI_NAMES = [
+const ELITE_AI_NAMES = [
     'Nexus Alpha', 'Quantum Blue', 'Momentum Prime', 'Value Core', 
     'Volatility Edge', 'Trend Rider', 'Contrarian Fund', 'Growth Engine', 'Omega Capital',
     'Stellar Ascent', 'Apex Dynamics', 'Momentum Machines', 'Vertex Ventures', 'Orion Capital', 
@@ -185,10 +188,34 @@ const AI_NAMES = [
     'Griffin Growth', 'Hydra Holdings', 'Infinity Investments', 'Javelin Ventures', 'Kestrel Capital'
 ];
 
+const RETAIL_NAME_PREFIXES = [
+    'Quantum', 'Apex', 'Stellar', 'Vertex', 'Orion', 'Helios', 'Zenith', 'Polaris', 'Crestview', 'Phoenix',
+    'Galactic', 'Titan', 'Elysian', 'Vanguard', 'Sierra', 'Neptune', 'Apollo', 'Meridian', 'Odyssey', 'Cascade',
+    'Ironclad', 'Summit', 'Delta', 'Axiom', 'Cygnus', 'Dragonfly', 'Echo', 'Fusion', 'Griffin', 'Hydra',
+    'Infinity', 'Javelin', 'Kestrel', 'Lunar', 'Mystic', 'Nova', 'Omega', 'Pulsar', 'Radiant', 'Solar'
+];
+
+const RETAIL_NAME_SUFFIXES = [
+    'Alpha', 'Blue', 'Prime', 'Core', 'Edge', 'Rider', 'Fund', 'Engine', 'Capital', 'Ascent',
+    'Dynamics', 'Machines', 'Ventures', 'Holdings', 'Wealth', 'Partners', 'Bets', 'Funds', 'Growth', 'Traders',
+    'Equities', 'Vision', 'Strategies', 'Navigators', 'Analytics', 'Markets', 'Ops', 'Investments', 'Seekers', 'Derivatives'
+];
+
+const generateRetailNames = (count: number): string[] => {
+    const names = new Set<string>();
+    while(names.size < count) {
+        const prefix = RETAIL_NAME_PREFIXES[Math.floor(Math.random() * RETAIL_NAME_PREFIXES.length)];
+        const suffix = RETAIL_NAME_SUFFIXES[Math.floor(Math.random() * RETAIL_NAME_SUFFIXES.length)];
+        names.add(`${prefix} ${suffix}`);
+    }
+    return Array.from(names);
+};
+
+
 const HIDDEN_LAYER_SIZE = 5;
-// Maintain the original ratio of advanced AIs (5 out of 9) to preserve the simulation's composition.
-const ADVANCED_AI_COUNT = Math.round(AI_NAMES.length * (12 / 50));
+const ADVANCED_AI_COUNT = 12; // Out of 50 elite AIs
 const EXTRA_NEURONS_FOR_ADVANCED_AI = 10;
+const TOTAL_RETAIL_INVESTORS = 250;
 
 export const buildInvestors = (): InvestorConfig[] => {
     const humanPlayer: InvestorConfig = {
@@ -200,16 +227,20 @@ export const buildInvestors = (): InvestorConfig[] => {
         }
     };
     
-    let aiInvestors: InvestorConfig[] = AI_NAMES.map((name, index) => {
+    // --- 1. Create the "Elite" AI Investors (50) ---
+    let eliteInvestors: InvestorConfig[] = ELITE_AI_NAMES.map((name, index) => {
         const minNeurons = 3 + Math.floor(Math.random() * 5); // 3-7 neurons minimum
         const maxNeurons = minNeurons + 5 + Math.floor(Math.random() * 10); // More varied max neurons
-        return generateInvestorAI(`investor-${index + 1}`, name, minNeurons, maxNeurons);
+        const riskRange: [number, number] = [0.8, 2.5];
+        const learningRateRange: [number, number] = [0.005, 0.02];
+        return generateInvestorAI(`investor-${index + 1}`, name, minNeurons, maxNeurons, riskRange, learningRateRange);
     });
 
-    // --- Upgrade random AIs to a multi-layer network ---
-    let shuffledAIs = [...aiInvestors].sort(() => 0.5 - Math.random());
+    // --- 2. Upgrade a portion of Elite AIs to be more advanced ---
+    let shuffledAIs = [...eliteInvestors].sort(() => 0.5 - Math.random());
+    
+    // Upgrade random AIs to a multi-layer network
     const selectedForMultiLayer = shuffledAIs.slice(0, ADVANCED_AI_COUNT);
-
     selectedForMultiLayer.forEach(ai => {
         const strategy = ai.strategy as HyperComplexInvestorStrategy;
         if (strategy.network.networkType === 'single-layer') {
@@ -239,25 +270,13 @@ export const buildInvestors = (): InvestorConfig[] => {
         }
     });
 
-    // --- Evolve AI population: create smartness tiers and a super AI ---
-    shuffledAIs = [...aiInvestors].sort(() => 0.5 - Math.random());
+    // Evolve elite AI population: create smartness tiers and a super AI
+    shuffledAIs = [...eliteInvestors].sort(() => 0.5 - Math.random());
     
-    // Tier 1 "Smarter" AIs (10 investors)
-    shuffledAIs.slice(0, 10).forEach(ai => {
-        (ai.strategy as HyperComplexInvestorStrategy).learningRate *= 1.2;
-    });
-
-    // Tier 2 "Smarter" AIs (5 investors)
-    shuffledAIs.slice(10, 15).forEach(ai => {
-        (ai.strategy as HyperComplexInvestorStrategy).learningRate *= 1.4;
-    });
-
-    // Tier 3 "Smarter" AIs (3 investors)
-    shuffledAIs.slice(15, 18).forEach(ai => {
-        (ai.strategy as HyperComplexInvestorStrategy).learningRate *= 1.6;
-    });
+    shuffledAIs.slice(0, 10).forEach(ai => { (ai.strategy as HyperComplexInvestorStrategy).learningRate *= 1.2; });
+    shuffledAIs.slice(10, 15).forEach(ai => { (ai.strategy as HyperComplexInvestorStrategy).learningRate *= 1.4; });
+    shuffledAIs.slice(15, 18).forEach(ai => { (ai.strategy as HyperComplexInvestorStrategy).learningRate *= 1.6; });
     
-    // Tier 4 "Super AI" (1 investor)
     const superInvestor = shuffledAIs[18];
     if (superInvestor) {
         const strategy = superInvestor.strategy as HyperComplexInvestorStrategy;
@@ -305,7 +324,20 @@ export const buildInvestors = (): InvestorConfig[] => {
         superInvestor.strategyName = `Super AI: ${superInvestor.strategyName}`;
     }
 
-    return [humanPlayer, ...aiInvestors];
+    // --- 3. Create the "Retail Trader" AI Investors (250) ---
+    const retailNames = generateRetailNames(TOTAL_RETAIL_INVESTORS);
+    const retailInvestors: InvestorConfig[] = retailNames.map((name, index) => {
+        // These investors will have simpler neural networks (fewer neurons)
+        // and represent more "average" trading behavior (lower learning rate, higher risk aversion).
+        const minNeurons = 2;
+        const maxNeurons = 6;
+        const riskRange: [number, number] = [1.5, 4.0]; // Generally more risk-averse
+        const learningRateRange: [number, number] = [0.002, 0.01]; // Slower learners
+        return generateInvestorAI(`retail-investor-${index + 1}`, name, minNeurons, maxNeurons, riskRange, learningRateRange);
+    });
+
+
+    return [humanPlayer, ...eliteInvestors, ...retailInvestors];
 };
 
 
@@ -408,15 +440,63 @@ export const MACRO_EVENTS = [
         description: 'A historic peace treaty is signed, ending a major conflict and boosting global market confidence.',
         type: 'positive',
         impact: { default: 1.10, Industrials: 0.90, Energy: 0.95 },
-    }
+    },
+    // Political
+    {
+        name: 'Major Trade Deal Signed',
+        description: 'A landmark international trade deal is signed, expected to reduce tariffs and boost exports for key sectors.',
+        type: 'positive',
+        impact: { default: 1.05, Industrials: 1.15, Finance: 1.10 },
+    },
+    {
+        name: 'Major Political Scandal',
+        description: 'A high-level political scandal erupts, creating market uncertainty and shaking investor confidence.',
+        type: 'negative',
+        impact: { default: 0.92, Finance: 0.88 },
+    },
+    {
+        name: 'Election Uncertainty',
+        description: 'A contentious election season creates significant political uncertainty, causing investors to become risk-averse.',
+        type: 'negative',
+        impact: { default: 0.95 },
+    },
+    {
+        name: 'Government Shutdown Looms',
+        description: 'Political gridlock threatens a government shutdown, which could disrupt federal services and economic activity.',
+        type: 'negative',
+        impact: { default: 0.94 },
+    },
+    // Natural Disasters
+    {
+        name: 'Massive Hurricane',
+        description: 'A category 5 hurricane makes landfall, causing widespread damage to infrastructure and disrupting supply chains.',
+        type: 'negative',
+        impact: { default: 0.90, Industrials: 0.85, Energy: 0.82 },
+    },
+    {
+        name: 'Major Earthquake',
+        description: 'A powerful earthquake strikes a major economic hub, crippling infrastructure and causing significant insurance losses.',
+        type: 'negative',
+        impact: { default: 0.92, Industrials: 0.88, Finance: 0.85 },
+    },
+    {
+        name: 'Widespread Wildfires',
+        description: 'Uncontrolled wildfires burn across vast areas, impacting agriculture, logistics, and causing economic disruption.',
+        type: 'negative',
+        impact: { default: 0.96, Industrials: 0.92 },
+    },
 ];
 
 
 export const SIMULATION_SPEEDS = [
-    { label: '0.5x', delay: 1000 },
-    { label: '1x', delay: 500 },
-    { label: '2x', delay: 250 },
-    { label: '5x', delay: 50 },
+    { label: 'Real-time', steps: 1 },
+    { label: '1 min/s', steps: 60 },
+    { label: '15 min/s', steps: 900 },
+    { label: '1 hour/s', steps: 3600 },
+    { label: '12 hour/s', steps: 43200 },
+    { label: '1 day/s', steps: 86400 },
+    { label: '3 day/s', steps: 259200 },
+    { label: '1 week/s', steps: 604800 },
 ];
 
 export const TAX_CONSTANTS = {

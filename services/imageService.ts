@@ -13,6 +13,8 @@ const ICONS: Record<string, string> = {
     'positive': `<path d="M5 12h14" /><path d="M12 5l7 7-7 7" />`, // arrow right
     'negative': `<path d="M19 12H5" /><path d="M12 19l-7-7 7-7" />`, // arrow left
     'macro': `<path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path d="M3.6 9h16.8" /><path d="M3.6 15h16.8" /><path d="M11.5 3a17 17 0 000 18" /><path d="M12.5 3a17 17 0 010 18" />`, // globe
+    'political': `<path d="M3 22v-13h18v13" /><path d="M4 9l8-6 8 6" /><path d="M2 22h20" />`, // capitol building
+    'disaster': `<path d="M18 10h-1.26A8 8 0 102 12h1.26" /><path d="M12 22V12" /><path d="M16 16l-4 4-4-4" />`, // storm cloud with lightning
     'default': `<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><path d="M9 22V12h6v10" />`, // building/market
 };
 
@@ -25,13 +27,27 @@ const THEMES: Record<string, { primary: string; secondary: string }> = {
     'Industrials': { primary: '#4b5563', secondary: '#6b7280' },
     'positive': { primary: '#166534', secondary: '#22c55e' },
     'negative': { primary: '#991b1b', secondary: '#ef4444' },
+    'political': { primary: '#4a044e', secondary: '#701a75' },
+    'disaster': { primary: '#450a0a', secondary: '#7f1d1d' },
     'default': { primary: '#1f2937', secondary: '#374151' },
+
+    // --- Blended Themes ---
+    'Technology_positive': { primary: '#1e3a8a', secondary: '#16a34a' }, // Blue to Green
+    'Technology_negative': { primary: '#1e3a8a', secondary: '#b91c1c' }, // Blue to Red
+    'Health_positive': { primary: '#065f46', secondary: '#65a30d' }, // Dark Green to Lime
+    'Health_negative': { primary: '#065f46', secondary: '#b91c1c' }, // Dark Green to Red
+    'Energy_positive': { primary: '#b45309', secondary: '#facc15' }, // Orange to Yellow
+    'Energy_negative': { primary: '#b45309', secondary: '#4b5563' }, // Orange to Gray
+    'Finance_positive': { primary: '#5b21b6', secondary: '#16a34a' }, // Purple to Green
+    'Finance_negative': { primary: '#5b21b6', secondary: '#b91c1c' }, // Purple to Red
+    'Industrials_positive': { primary: '#4b5563', secondary: '#16a34a' }, // Gray to Green
+    'Industrials_negative': { primary: '#4b5563', secondary: '#991b1b' }, // Gray to Dark Red
 };
 
 // --- Keyword to Concept Mapping (Simulated Semantic Layer) ---
 const KEYWORD_ASSOCIATIONS: Record<string, string> = {
-    'surge': 'positive', 'rallies': 'positive', 'growth': 'positive', 'cheers': 'positive', 'groundbreaking': 'positive', 'breakthrough': 'positive', 'success': 'positive', 'approval': 'positive', 'boom': 'positive', 'peace': 'positive', 'wins': 'positive',
-    'plummet': 'negative', 'tumbles': 'negative', 'headwinds': 'negative', 'drops': 'negative', 'warning': 'negative', 'fears': 'negative', 'concern': 'negative', 'failure': 'negative', 'breach': 'negative', 'recall': 'negative', 'recession': 'negative', 'war': 'negative', 'pandemic': 'negative',
+    'surge': 'positive', 'rallies': 'positive', 'growth': 'positive', 'cheers': 'positive', 'groundbreaking': 'positive', 'breakthrough': 'positive', 'success': 'positive', 'approval': 'positive', 'boom': 'positive', 'peace': 'positive', 'wins': 'positive', 'deal': 'positive', 'unveils': 'positive', 'soars': 'positive', 'gains': 'positive',
+    'plummet': 'negative', 'tumbles': 'negative', 'headwinds': 'negative', 'drops': 'negative', 'warning': 'negative', 'fears': 'negative', 'concern': 'negative', 'failure': 'negative', 'breach': 'negative', 'recall': 'negative', 'recession': 'negative', 'war': 'negative', 'pandemic': 'negative', 'scandal': 'negative', 'uncertainty': 'negative', 'shutdown': 'negative', 'damage': 'negative', 'disrupting': 'negative', 'strikes': 'negative', 'anxious': 'negative', 'looms': 'negative', 'pressure': 'negative',
     'split': 'split',
     'chip': 'Technology', 'ai': 'Technology', 'software': 'Technology', 'cyber': 'Technology', 'data': 'Technology', 'cloud': 'Technology', 'quantum': 'Technology',
     'fda': 'Health', 'drug': 'Health', 'health': 'Health', 'medical': 'Health', 'pharma': 'Health', 'clinic': 'Health',
@@ -39,6 +55,8 @@ const KEYWORD_ASSOCIATIONS: Record<string, string> = {
     'finance': 'Finance', 'earnings': 'Finance', 'fintech': 'Finance', 'rate': 'Finance', 'rating': 'Finance', 'bank': 'Finance',
     'industrials': 'Industrials', 'contract': 'Industrials', 'supply': 'Industrials', 'factory': 'Industrials', 'logistics': 'Industrials',
     'global': 'macro', 'market': 'macro',
+    'political': 'political', 'election': 'political', 'government': 'political', 'trade': 'political',
+    'hurricane': 'disaster', 'earthquake': 'disaster', 'wildfires': 'disaster', 'natural': 'disaster',
 };
 
 
@@ -84,41 +102,43 @@ const generateSvg = (mainText: string, iconPath: string, theme: { primary: strin
 export const getImageForEvent = (headline: string, ...extraKeywords: string[]): string => {
     const combinedText = [headline, ...extraKeywords].join(' ').toLowerCase();
     
-    let bestConcept = 'default';
-    let highestPriority = -1;
+    let primaryConcept: string | null = null;
+    let secondaryConcept: string | null = null;
 
-    const priorities = { 'sector': 3, 'sentiment': 2, 'action': 1, 'default': 0 };
+    const priorities = { 'political': 4, 'disaster': 4, 'sector': 3, 'sentiment': 2, 'action': 1, 'default': 0 };
 
-    // Determine the most relevant concept from keywords
+    // Determine the most relevant concepts from keywords
     for (const keyword in KEYWORD_ASSOCIATIONS) {
         if (combinedText.includes(keyword)) {
             const concept = KEYWORD_ASSOCIATIONS[keyword];
-            let priority = 0;
-            if (THEMES[concept] && ICONS[concept]) {
-                if (['Technology', 'Health', 'Energy', 'Finance', 'Industrials'].includes(concept)) {
-                    priority = priorities.sector;
-                } else if (['positive', 'negative'].includes(concept)) {
-                    priority = priorities.sentiment;
-                } else {
-                    priority = priorities.action;
-                }
-            }
-
-            if (priority > highestPriority) {
-                highestPriority = priority;
-                bestConcept = concept;
+            if (['Technology', 'Health', 'Energy', 'Finance', 'Industrials'].includes(concept)) {
+                primaryConcept = concept;
+            } else if (['positive', 'negative'].includes(concept)) {
+                secondaryConcept = concept;
+            } else if ((priorities.political > (priorities as any)[primaryConcept] || 0)) {
+                primaryConcept = concept;
+            } else if ((priorities.disaster > (priorities as any)[primaryConcept] || 0)) {
+                primaryConcept = concept;
             }
         }
     }
-    
-    // Override with explicit sector keyword if available
-    const sectorKeyword = extraKeywords.find(k => k && THEMES[k]);
-    if (sectorKeyword) {
-        bestConcept = sectorKeyword;
-    }
 
-    const theme = THEMES[bestConcept] || THEMES.default;
-    const iconPath = ICONS[bestConcept] || ICONS.default;
+    if (!primaryConcept && secondaryConcept) {
+        primaryConcept = secondaryConcept;
+        secondaryConcept = null;
+    }
+    primaryConcept = primaryConcept || 'default';
+    
+    let themeKey = primaryConcept;
+    if (primaryConcept && secondaryConcept) {
+        const blendedKey = `${primaryConcept}_${secondaryConcept}`;
+        if (THEMES[blendedKey]) {
+            themeKey = blendedKey;
+        }
+    }
+    
+    const theme = THEMES[themeKey] || THEMES[primaryConcept] || THEMES.default;
+    const iconPath = ICONS[primaryConcept] || ICONS.default;
     
     // Extract a main subject for the image, typically the stock symbol
     const stockSymbolMatch = headline.match(/^([A-Z]+)/);

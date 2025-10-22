@@ -42,6 +42,7 @@ const generateCorporateAIWeights = (): { split: Record<string, number>, alliance
 };
 
 export const initializeState = (): SimulationState => {
+  const startDate = new Date('2024-01-01T09:30:00Z');
   const stocks: Stock[] = STOCK_SYMBOLS.map(s => {
     const initialPrice = MIN_INITIAL_STOCK_PRICE + Math.random() * (MAX_INITIAL_STOCK_PRICE - MIN_INITIAL_STOCK_PRICE);
     const history = generateInitialHistory(INITIAL_HISTORY_LENGTH, initialPrice);
@@ -54,6 +55,8 @@ export const initializeState = (): SimulationState => {
           learningRate: 0.01 + Math.random() * 0.04, // Corporate learning rate
       },
       isDelisted: false,
+      sharesOutstanding: 50_000_000 + Math.random() * 150_000_000,
+      eps: 1.0 + Math.random() * 4.0,
     };
   });
   
@@ -78,9 +81,13 @@ export const initializeState = (): SimulationState => {
       marketIndexHistory.push({day: i + 1, price: avgPrice});
   }
 
+  const initialTime = new Date(startDate.getTime());
+  initialTime.setDate(initialTime.getDate() + day);
+
   return {
     day,
-    startDate: new Date('2024-01-01T00:00:00Z').toISOString(),
+    time: initialTime.toISOString(),
+    startDate: startDate.toISOString(),
     stocks,
     investors,
     activeEvent: null,
@@ -422,10 +429,8 @@ const evaluateTradesAndLearn = (investor: Investor, stocks: Stock[]) => {
     });
 };
 
-
-export const runTimeStep = (prevState: SimulationState): SimulationState => {
-  const nextDay = prevState.day + 1;
-  const state: SimulationState = structuredClone(prevState);
+const runEndOfDayLogic = (state: SimulationState): SimulationState => {
+  const nextDay = state.day + 1;
   state.day = nextDay;
   state.activeEvent = null; // Clear last event
 
@@ -470,82 +475,43 @@ export const runTimeStep = (prevState: SimulationState): SimulationState => {
 
   const dailyTradeVolumes: Record<string, number> = {};
 
-  // 2. Update Stock Prices
+  // 2. Apply End-of-Day Price Changes
   state.stocks.forEach(stock => {
-      if (stock.isDelisted) return;
-      dailyTradeVolumes[stock.symbol] = 0;
+    if(stock.isDelisted) return;
+    dailyTradeVolumes[stock.symbol] = 0;
+    
+    let currentPrice = stock.history[stock.history.length - 1].close;
+    
+    const boDrag = (WASHINGTON_B_AND_O_TAX_RATES_BY_SECTOR[stock.sector] || 0) / 365;
+    currentPrice *= (1 - boDrag + INFLATION_RATE);
 
-      const lastHistory = stock.history[stock.history.length - 1];
-      let newPrice = lastHistory.close;
+    if (state.activeEvent) {
+        if (state.activeEvent.stockSymbol === stock.symbol && typeof state.activeEvent.impact === 'number') {
+            currentPrice *= state.activeEvent.impact;
+        } else if (state.activeEvent.stockSymbol === null && typeof state.activeEvent.impact === 'object') {
+            const impact = state.activeEvent.impact[stock.sector] || state.activeEvent.impact['default'] || 1;
+            currentPrice *= impact;
+        }
+    }
 
-      const boDrag = (WASHINGTON_B_AND_O_TAX_RATES_BY_SECTOR[stock.sector] || 0) / 365;
-      newPrice *= (1 - boDrag + INFLATION_RATE);
+    if (!state.activeEvent && Math.random() < 0.005) {
+        const events = CORPORATE_EVENTS_BY_SECTOR[stock.sector];
+        const eventType = Math.random() > 0.5 ? 'positive' : 'negative';
+        const eventConfig = events[eventType][Math.floor(Math.random() * events[eventType].length)];
+        createEvent({
+            stockSymbol: stock.symbol,
+            stockName: stock.name,
+            eventName: eventConfig.name,
+            description: eventConfig.description,
+            type: eventConfig.type,
+            impact: eventConfig.impact,
+        }, [stock.sector, stock.name, eventConfig.type]);
+        if(typeof eventConfig.impact === 'number') currentPrice *= eventConfig.impact;
+    }
 
-      const volatility = 0.03; 
-      newPrice *= (1 + (Math.random() - 0.5) * volatility);
-
-      if (state.activeEvent) {
-          if (state.activeEvent.stockSymbol === stock.symbol && typeof state.activeEvent.impact === 'number') {
-              newPrice *= state.activeEvent.impact;
-          } else if (state.activeEvent.stockSymbol === null && typeof state.activeEvent.impact === 'object') {
-              const impact = state.activeEvent.impact[stock.sector] || state.activeEvent.impact['default'] || 1;
-              newPrice *= impact;
-          }
-      }
-
-      if (!state.activeEvent && Math.random() < 0.005) {
-          const events = CORPORATE_EVENTS_BY_SECTOR[stock.sector];
-          const eventType = Math.random() > 0.5 ? 'positive' : 'negative';
-          const eventConfig = events[eventType][Math.floor(Math.random() * events[eventType].length)];
-          createEvent({
-              stockSymbol: stock.symbol,
-              stockName: stock.name,
-              eventName: eventConfig.name,
-              description: eventConfig.description,
-              type: eventConfig.type,
-              impact: eventConfig.impact,
-          }, [stock.sector, stock.name, eventConfig.type]);
-          if(typeof eventConfig.impact === 'number') newPrice *= eventConfig.impact;
-      }
-      
-      newPrice = Math.max(0.01, newPrice);
-
-      const open = lastHistory.close;
-      const close = newPrice;
-      const high = Math.max(open, close) * (1 + Math.random() * 0.015);
-      const low = Math.min(open, close) * (1 - Math.random() * 0.015);
-      
-      stock.history.push({ day: nextDay, open, high, low, close, volume: 0 });
-      if (stock.history.length > INITIAL_HISTORY_LENGTH + 50) {
-          stock.history.shift();
-      }
-      
-      if (close > MIN_STOCK_SPLIT_PRICE + (Math.random() * (MAX_STOCK_SPLIT_PRICE - MIN_STOCK_SPLIT_PRICE))) {
-          const ratio = Math.floor(Math.random() * 2) + 2;
-          const event = createEvent({
-              stockSymbol: stock.symbol,
-              stockName: stock.name,
-              eventName: `${stock.symbol} Stock Split`,
-              description: `Following a strong performance, ${stock.name} has announced a ${ratio}-for-1 stock split to make shares more accessible.`,
-              type: 'split',
-              impact: 1,
-              splitDetails: { symbol: stock.symbol, ratio }
-          }, [stock.sector, stock.name, 'split']);
-          
-          stock.history.forEach(h => {
-              h.open /= ratio; h.high /= ratio; h.low /= ratio; h.close /= ratio;
-          });
-          state.investors.forEach(inv => {
-              const item = inv.portfolio.find(p => p.symbol === stock.symbol);
-              if (item) {
-                  item.lots.forEach(lot => {
-                      lot.shares *= ratio;
-                      lot.purchasePrice /= ratio;
-                  });
-              }
-          });
-      }
+    stock.history[stock.history.length - 1].close = Math.max(0.01, currentPrice);
   });
+
 
   // 3. Investor Actions
   state.investors.forEach(investor => {
@@ -573,10 +539,9 @@ export const runTimeStep = (prevState: SimulationState): SimulationState => {
                       item = { symbol: stock.symbol, lots: [] };
                       investor.portfolio.push(item);
                   }
-                  item.lots.push({ purchaseDay: nextDay, purchasePrice: currentPrice, shares: sharesToBuy, purchaseIndicators: indicators });
-                  dailyTradeVolumes[stock.symbol] += sharesToBuy;
+                  item.lots.push({ purchaseTime: state.time, purchasePrice: currentPrice, shares: sharesToBuy, purchaseIndicators: indicators });
+                  dailyTradeVolumes[stock.symbol] = (dailyTradeVolumes[stock.symbol] || 0) + sharesToBuy;
                   
-                  // Track trade for learning
                   const trade: RecentTrade = {
                     symbol: stock.symbol, day: nextDay, type: 'buy', shares: sharesToBuy, price: currentPrice,
                     indicatorsAtTrade: indicators, activationsAtTrade: allActivations, outcomeEvaluationDay: nextDay + 5,
@@ -588,12 +553,11 @@ export const runTimeStep = (prevState: SimulationState): SimulationState => {
               const sharesToSell = Math.floor(sharesOwned * 0.5);
               if (sharesToSell > 0) {
                   investor.cash += sharesToSell * currentPrice;
-                  dailyTradeVolumes[stock.symbol] += sharesToSell;
+                  dailyTradeVolumes[stock.symbol] = (dailyTradeVolumes[stock.symbol] || 0) + sharesToSell;
                   
                   let soldAmount = sharesToSell;
-                  portfolioItem!.lots.sort((a, b) => a.purchaseDay - b.purchaseDay);
+                  portfolioItem!.lots.sort((a, b) => new Date(a.purchaseTime).getTime() - new Date(b.purchaseTime).getTime());
                   
-                  // Track trade for learning BEFORE modifying lots
                   const trade: RecentTrade = {
                       symbol: stock.symbol, day: nextDay, type: 'sell', shares: sharesToSell, price: currentPrice,
                       indicatorsAtTrade: indicators, activationsAtTrade: allActivations, outcomeEvaluationDay: nextDay + 5,
@@ -603,8 +567,9 @@ export const runTimeStep = (prevState: SimulationState): SimulationState => {
                   const remainingLots = portfolioItem!.lots.filter(lot => {
                       if (soldAmount <= 0) return true;
                       
+                      const holdingPeriod = (new Date(state.time).getTime() - new Date(lot.purchaseTime).getTime()) / (1000 * 3600 * 24);
                       const gainOrLoss = (currentPrice - lot.purchasePrice) * Math.min(lot.shares, soldAmount);
-                      if ((nextDay - lot.purchaseDay) > TAX_CONSTANTS.LONG_TERM_HOLDING_PERIOD) {
+                      if (holdingPeriod > TAX_CONSTANTS.LONG_TERM_HOLDING_PERIOD) {
                           investor.waAnnualNetLTCG += gainOrLoss;
                       }
 
@@ -667,6 +632,57 @@ export const runTimeStep = (prevState: SimulationState): SimulationState => {
       });
   }
 
+  // Set up for next day
+   state.stocks.forEach(stock => {
+    if (stock.isDelisted) return;
+    const lastHistory = stock.history[stock.history.length - 1];
+    stock.history.push({ day: nextDay, open: lastHistory.close, high: lastHistory.close, low: lastHistory.close, close: lastHistory.close, volume: 0 });
+    if (stock.history.length > INITIAL_HISTORY_LENGTH + 50) {
+        stock.history.shift();
+    }
+  });
+
+
+  return state;
+}
+
+export const advanceTime = (prevState: SimulationState, secondsToAdvance: number): SimulationState => {
+  let state = structuredClone(prevState);
+  let currentTime = new Date(state.time);
+
+  const endDate = new Date(currentTime.getTime() + secondsToAdvance * 1000);
+  let nextDayBoundary = new Date(currentTime);
+  nextDayBoundary.setUTCHours(0, 0, 0, 0);
+  nextDayBoundary.setUTCDate(nextDayBoundary.getUTCDate() + 1);
+
+  while (currentTime < endDate) {
+      const remainingTime = (endDate.getTime() - currentTime.getTime()) / 1000;
+      const timeToNextDay = (nextDayBoundary.getTime() - currentTime.getTime()) / 1000;
+      
+      const stepSeconds = Math.min(remainingTime, timeToNextDay);
+
+      currentTime = new Date(currentTime.getTime() + stepSeconds * 1000);
+
+      const secondsInDay = 86400;
+      const volatility = (Math.sqrt(stepSeconds) * 0.03) / Math.sqrt(secondsInDay);
+
+      state.stocks.forEach(stock => {
+          if(stock.isDelisted) return;
+          const lastHistory = stock.history[stock.history.length - 1];
+          let newPrice = lastHistory.close * (1 + (Math.random() - 0.5) * volatility);
+          newPrice = Math.max(0.01, newPrice);
+          lastHistory.close = newPrice;
+          lastHistory.high = Math.max(lastHistory.high, newPrice);
+          lastHistory.low = Math.min(lastHistory.low, newPrice);
+      });
+
+      if (currentTime >= nextDayBoundary) {
+          state = runEndOfDayLogic(state);
+          nextDayBoundary.setUTCDate(nextDayBoundary.getUTCDate() + 1);
+      }
+  }
+
+  state.time = currentTime.toISOString();
   return state;
 };
 
@@ -690,7 +706,7 @@ export const playerBuyStock = (prevState: SimulationState, playerId: string, sym
       player.portfolio.push(portfolioItem);
     }
     const newLot: ShareLot = {
-      purchaseDay: state.day,
+      purchaseTime: state.time,
       purchasePrice: currentPrice,
       shares: shares,
       purchaseIndicators: {},
@@ -724,8 +740,8 @@ export const playerSellStock = (prevState: SimulationState, playerId: string, sy
   player.cash += sharesToSell * currentPrice;
 
   let soldAmount = sharesToSell;
-  // FIFO: sort by purchase day
-  portfolioItem.lots.sort((a, b) => a.purchaseDay - b.purchaseDay);
+  // FIFO: sort by purchase time
+  portfolioItem.lots.sort((a, b) => new Date(a.purchaseTime).getTime() - new Date(b.purchaseTime).getTime());
   
   const remainingLots = portfolioItem.lots.filter((lot: ShareLot) => {
     if (soldAmount <= 0) return true; // Keep lot

@@ -24,13 +24,13 @@ const SimulationControls: React.FC<SimulationControlsProps> = ({ isRunning, onPl
         </button>
       </div>
       <div className="h-6 w-px bg-gray-700"></div>
-      <div className="flex items-center gap-1">
-      {SIMULATION_SPEEDS.map(({ label, delay }) => (
+      <div className="flex items-center gap-1 flex-wrap">
+      {SIMULATION_SPEEDS.map(({ label, steps }) => (
         <button
           key={label}
-          onClick={() => onSpeedChange(delay)}
+          onClick={() => onSpeedChange(steps)}
           className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-accent/50 ${
-            speed === delay 
+            speed === steps 
             ? 'bg-accent text-white' 
             : 'text-gray-300 hover:bg-gray-700'
           }`}

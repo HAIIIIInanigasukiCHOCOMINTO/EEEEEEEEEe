@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { SimulationState, Stock, Investor, Page } from './types';
-import { initializeState, runTimeStep, playerBuyStock, playerSellStock } from './services/simulationService';
+import { initializeState, advanceTime, playerBuyStock, playerSellStock } from './services/simulationService';
 import { SIMULATION_SPEEDS } from './constants';
 import DetailedStockView from './components/DetailedStockView';
 import Header from './components/Header';
@@ -13,7 +13,7 @@ import NewsDetailView from './components/NewsDetailView';
 const App: React.FC = () => {
   const [simulationState, setSimulationState] = useState<SimulationState | null>(null);
   const [isRunning, setIsRunning] = useState<boolean>(true);
-  const [speed, setSpeed] = useState<number>(SIMULATION_SPEEDS[2].delay);
+  const [speed, setSpeed] = useState<number>(SIMULATION_SPEEDS[3].steps);
   const [selectedStockSymbol, setSelectedStockSymbol] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [activePage, setActivePage] = useState<Page>('home');
@@ -35,9 +35,9 @@ const App: React.FC = () => {
       intervalRef.current = window.setInterval(() => {
         setSimulationState(prevState => {
           if (!prevState) return null;
-          return runTimeStep(prevState);
+          return advanceTime(prevState, speed);
         });
-      }, speed);
+      }, 1000); // Run the simulation loop every 1 second.
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);

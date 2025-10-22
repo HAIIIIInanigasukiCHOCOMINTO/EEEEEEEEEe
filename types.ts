@@ -32,10 +32,12 @@ export interface Stock {
   history: OHLCDataPoint[];
   corporateAI: CorporateAI;
   isDelisted?: boolean;
+  sharesOutstanding: number;
+  eps: number; // Earnings Per Share
 }
 
 export interface ShareLot {
-  purchaseDay: number;
+  purchaseTime: string; // Changed from purchaseDay to be more precise
   purchasePrice: number;
   shares: number;
   purchaseIndicators: Record<string, number>;
@@ -151,6 +153,7 @@ export interface TrackedCorporateAction {
 
 export interface SimulationState {
   day: number;
+  time: string; // Authoritative clock for the simulation
   startDate: string; // ISO string for the start date of the simulation
   stocks: Stock[];
   investors: Investor[];
@@ -163,3 +166,16 @@ export interface SimulationState {
 }
 
 export type Page = 'home' | 'portfolio' | 'markets' | 'aii';
+
+// Data structure for the enhanced markets page table
+export interface StockListData extends Stock {
+    price: number;
+    change: number;
+    changePercent: number;
+    volume: number;
+    marketCap: number;
+    peRatio: number;
+    high52w: number;
+    low52w: number;
+    trendingScore: number;
+}
