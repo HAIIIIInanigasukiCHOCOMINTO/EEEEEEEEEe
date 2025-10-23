@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Stock, Investor } from '../types';
 import PlayerTradeControls from './PlayerTradeControls';
 import NeuralNetworkVisualizer from './NeuralNetworkVisualizer';
@@ -17,6 +17,19 @@ const StatItem: React.FC<{label: string, value: string | number}> = ({label, val
     </div>
 )
 
+type TimeRange = '1D' | '1W' | '1M' | '1Y' | '5Y' | 'MAX';
+
+const TimeRangeButton: React.FC<{label: TimeRange, activeRange: TimeRange, onClick: (range: TimeRange) => void}> = ({ label, activeRange, onClick }) => (
+    <button 
+        onClick={() => onClick(label)}
+        className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+            activeRange === label ? 'bg-accent text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+        }`}
+    >
+        {label}
+    </button>
+);
+
 const DetailedStockView: React.FC<{
   stock: Stock;
   onClose: () => void;
@@ -24,6 +37,8 @@ const DetailedStockView: React.FC<{
   onPlayerBuy?: (symbol: string, shares: number) => void;
   onPlayerSell?: (symbol: string, shares: number) => void;
 }> = ({ stock, onClose, player, onPlayerBuy, onPlayerSell }) => {
+  const [timeRange, setTimeRange] = useState<TimeRange>('1Y');
+  
   if (!stock) return null;
 
   const currentHistory = stock.history[stock.history.length - 1];
@@ -42,6 +57,18 @@ const DetailedStockView: React.FC<{
   const high52w = stock.history.slice(-252).reduce((max, p) => Math.max(max, p.high), 0);
   const low52w = stock.history.slice(-252).reduce((min, p) => Math.min(min, p.low), Infinity);
 
+  const chartData = useMemo(() => {
+    const history = stock.history;
+    switch (timeRange) {
+        case '1D': return history.slice(-2); // Show last 2 days to get a single line/candle of change
+        case '1W': return history.slice(-7);
+        case '1M': return history.slice(-30);
+        case '1Y': return history.slice(-252);
+        case '5Y': return history.slice(-252 * 5);
+        case 'MAX': return history;
+        default: return history.slice(-252);
+    }
+  }, [stock.history, timeRange]);
 
   return (
     <div 
@@ -65,7 +92,7 @@ const DetailedStockView: React.FC<{
         <div className="p-4 md:p-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
-                <div className="mb-4">
+                <div className="mb-2">
                     <p className="text-4xl font-bold text-gray-200 font-mono">{currentPrice.toFixed(2)}</p>
                     <div className={`text-xl font-semibold ${changeColorClass} flex items-center gap-3 font-mono`}>
                         <span>{isUp ? '+' : ''}{change.toFixed(2)}</span>
@@ -73,8 +100,14 @@ const DetailedStockView: React.FC<{
                     </div>
                 </div>
 
+                <div className="flex items-center gap-2 mb-2">
+                    {(['1D', '1W', '1M', '1Y', '5Y', 'MAX'] as TimeRange[]).map(range => (
+                        <TimeRangeButton key={range} label={range} activeRange={timeRange} onClick={setTimeRange} />
+                    ))}
+                </div>
+
                 <div className="h-96 w-full">
-                    <CandlestickChart data={stock.history} />
+                    <CandlestickChart data={chartData} />
                 </div>
               </div>
 

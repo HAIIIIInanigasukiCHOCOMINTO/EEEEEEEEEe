@@ -58,6 +58,10 @@ const CandlestickChart: React.FC<{ data: OHLCDataPoint[] }> = ({ data }) => {
     if (!rechartsLoaded) {
         return <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">Loading chart...</div>;
     }
+
+    if (data.length < 2) {
+        return <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">Not enough data for this time range.</div>;
+    }
   
     const { ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = (window as any).Recharts;
 
