@@ -27,31 +27,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-const CandlestickShape = (props: any) => {
-  const { x, y, width, height, open, close, low, high, fill } = props;
-  const isUp = close >= open;
-  const candleFill = isUp ? 'var(--theme-gain)' : 'var(--theme-loss)';
-  const wickStroke = isUp ? 'var(--theme-gain)' : 'var(--theme-loss)';
-
-  return (
-    <g stroke={wickStroke} fill={candleFill} strokeWidth="1">
-      <path
-        d={`
-          M ${x + width / 2}, ${y}
-          L ${x + width / 2}, ${height}
-        `}
-      />
-      <rect
-        x={x}
-        y={isUp ? close : open}
-        width={width}
-        height={Math.max(1, Math.abs(open - close))}
-        fill={candleFill}
-      />
-    </g>
-  );
-};
-
 const CandlestickChart: React.FC<{ data: OHLCDataPoint[] }> = ({ data }) => {
     const [rechartsLoaded, setRechartsLoaded] = useState(false);
 
@@ -84,13 +59,11 @@ const CandlestickChart: React.FC<{ data: OHLCDataPoint[] }> = ({ data }) => {
         return <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">Loading chart...</div>;
     }
   
-    const { AreaChart, Area, ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } = (window as any).Recharts;
+    const { ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = (window as any).Recharts;
 
     const dataMin = Math.min(...data.map(d => d.low));
     const dataMax = Math.max(...data.map(d => d.high));
   
-    // Fix: Replaced undefined 'tailwind' variable with a hardcoded theme object
-    // using colors consistent with the rest of the application.
     const theme = {
         gain: '#22c55e',
         loss: '#ef4444',
@@ -110,10 +83,6 @@ const CandlestickChart: React.FC<{ data: OHLCDataPoint[] }> = ({ data }) => {
                         <stop offset="5%" stopColor={theme.gain} stopOpacity={0.4}/>
                         <stop offset="95%" stopColor={theme.gain} stopOpacity={0}/>
                     </linearGradient>
-                    <linearGradient id="colorLoss" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={theme.loss} stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor={theme.loss} stopOpacity={0}/>
-                    </linearGradient>
                 </defs>
                 <XAxis dataKey="day" stroke={theme['gray-600']} tick={{ fontSize: 12 }} />
                 <YAxis 
@@ -126,17 +95,36 @@ const CandlestickChart: React.FC<{ data: OHLCDataPoint[] }> = ({ data }) => {
                 <CartesianGrid strokeDasharray="3 3" stroke={theme['gray-800']} />
                 <Tooltip content={<CustomTooltip />} wrapperStyle={{ outline: 'none' }}/>
 
-                <Bar dataKey="close" shape={(props: any) => {
-                    const { x, y, width, payload } = props;
-                    const isUp = payload.close >= payload.open;
+                <Bar dataKey={['low', 'high']} shape={(props: any) => {
+                    const { x, y, width, height, payload } = props;
+                    const { open, close, high, low } = payload;
+                    
+                    if (typeof open !== 'number' || typeof close !== 'number' || typeof high !== 'number' || typeof low !== 'number') {
+                        return null;
+                    }
+
+                    const isUp = close >= open;
+                    const fill = isUp ? theme.gain : theme.loss;
+                    const stroke = isUp ? theme.gain : theme.loss;
+                    
+                    const range = high - low;
+
+                    const y_open = y + (range > 0 ? ((high - open) / range) * height : 0);
+                    const y_close = y + (range > 0 ? ((high - close) / range) * height : 0);
+
+                    const body_y = Math.min(y_open, y_close);
+                    const body_height = Math.max(1, Math.abs(y_open - y_close));
+
                     return (
                         <g>
-                            <line x1={x + width / 2} y1={payload.high} x2={x + width / 2} y2={payload.low} stroke={isUp ? theme.gain : theme.loss} />
-                            <rect x={x} y={Math.min(payload.open, payload.close)} width={width} height={Math.abs(payload.open - payload.close) || 1} fill={isUp ? theme.gain : theme.loss} />
+                            {/* Wick */}
+                            <line x1={x + width / 2} y1={y} x2={x + width / 2} y2={y + height} stroke={stroke} strokeWidth={1} />
+                            {/* Body */}
+                            <rect x={x} y={body_y} width={width} height={body_height} fill={fill} />
                         </g>
-                    )
+                    );
                 }}/>
-                 <Area type="monotone" dataKey="close" stroke={theme.accent} fill="url(#colorGain)" fillOpacity={0.1} strokeWidth={2} dot={false} isAnimationActive={false} />
+                <Area type="monotone" dataKey="close" stroke={theme.accent} fill="url(#colorGain)" fillOpacity={0.1} strokeWidth={2} dot={false} isAnimationActive={false} />
             </ComposedChart>
         </ResponsiveContainer>
     );

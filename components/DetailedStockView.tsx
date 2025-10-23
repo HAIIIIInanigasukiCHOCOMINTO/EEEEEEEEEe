@@ -103,9 +103,9 @@ const DetailedStockView: React.FC<{
              <div className="mt-6">
                 <h3 className="text-lg font-bold text-gray-200 mb-2">Corporate AI Neural Network</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <NeuralNetworkVisualizer title="Split Logic" weights={stock.corporateAI.weights.split} />
-                    <NeuralNetworkVisualizer title="Alliance Logic" weights={stock.corporateAI.weights.alliance} />
-                    <NeuralNetworkVisualizer title="Acquisition Logic" weights={stock.corporateAI.weights.acquisition} />
+                    <NeuralNetworkVisualizer title="Split Logic (Input Avg. Strength)" weights={stock.corporateAI.splitNN.getInputLayerWeights()} />
+                    <NeuralNetworkVisualizer title="Alliance Logic (Input Avg. Strength)" weights={stock.corporateAI.allianceNN.getInputLayerWeights()} />
+                    <NeuralNetworkVisualizer title="Acquisition Logic (Input Avg. Strength)" weights={stock.corporateAI.acquisitionNN.getInputLayerWeights()} />
                 </div>
             </div>
         </div>

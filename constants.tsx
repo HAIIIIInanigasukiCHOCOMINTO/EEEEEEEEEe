@@ -1,12 +1,13 @@
 import React from 'react';
-import { InvestorStrategy, ComplexInvestorStrategy, HyperComplexInvestorStrategy, NeuralNetworkWeights } from './types';
+import { InvestorStrategy, ComplexInvestorStrategy, HyperComplexInvestorStrategy } from './types';
+import { NeuralNetwork } from './services/neuralNetwork';
 
 // Fix: Add a specific type for corporate event configurations to improve type safety.
 interface CorporateEventConfig {
   name: string;
   description: string;
-  impact: number;
-  type: 'positive' | 'negative';
+  impact?: number; // Made optional for neutral events
+  type: 'positive' | 'negative' | 'neutral' | 'political' | 'disaster';
 }
 
 type InvestorConfig = {
@@ -26,7 +27,7 @@ export const STOCK_SYMBOLS = [
   { symbol: 'FINX', name: 'FinEx Solutions', sector: 'Finance' },
   { symbol: 'QUAN', name: 'Quantum Leap', sector: 'Technology' },
   { symbol: 'CYBR', name: 'CyberSec Corp', sector: 'Technology' },
-  { symbol: 'BIOF', name: 'BioFuture Labs', sector: 'Health' },
+  { symbol: 'BIOF', 'name': 'BioFuture Labs', sector: 'Health' },
   { symbol: 'SOLR', name: 'Solaris Energy', sector: 'Energy' },
   { symbol: 'DRON', name: 'DroneWorks', sector: 'Technology' },
   { symbol: 'DATA', name: 'DataMine Inc.', sector: 'Technology' },
@@ -74,445 +75,516 @@ export const STOCK_SYMBOLS = [
   { symbol: 'AUTO', name: 'AutoDrive Systems', sector: 'Industrials' },
   { symbol: 'CHEM', name: 'ChemiCorp', sector: 'Industrials' },
   { symbol: 'RAIL', name: 'RailWorks Logistics', sector: 'Industrials' },
+  // --- Additional Stocks (272) ---
+  // --- Technology Sector (55 new) ---
+  { symbol: 'QNTM', name: 'Quantum Core AI', sector: 'Technology' },
+  { symbol: 'SGLR', name: 'Singularity Solutions', sector: 'Technology' },
+  { symbol: 'FBRC', name: 'Fabricate Robotics', sector: 'Technology' },
+  { symbol: 'CRWN', name: 'CrowdNet Systems', sector: 'Technology' },
+  { symbol: 'PLGN', name: 'Polygon Graphics', sector: 'Technology' },
+  { symbol: 'NVGT', name: 'Navigate Mapping', sector: 'Technology' },
+  { symbol: 'ZPHY', name: 'Zephyr OS', sector: 'Technology' },
+  { symbol: 'ECHO', name: 'EchoComms Inc.', sector: 'Technology' },
+  { symbol: 'VLCT', name: 'Velocity Data', sector: 'Technology' },
+  { symbol: 'AXON', name: 'Axon Neural', sector: 'Technology' },
+  { symbol: 'PXL', name: 'PixelForge', sector: 'Technology' },
+  { symbol: 'CDX', name: 'Codex Software', sector: 'Technology' },
+  { symbol: 'SYN', name: 'SynthoLogic', sector: 'Technology' },
+  { symbol: 'VRTU', name: 'VirtuVerse', sector: 'Technology' },
+  { symbol: 'ADPT', name: 'AdaptiCore', sector: 'Technology' },
+  { symbol: 'EVLV', name: 'Evolv AI', sector: 'Technology' },
+  { symbol: 'NBLA', name: 'Nebula Cloud', sector: 'Technology' },
+  { symbol: 'FRGM', name: 'Fragment Security', sector: 'Technology' },
+  { symbol: 'CRTX', name: 'Cortex Circuits', sector: 'Technology' },
+  { symbol: 'LNKD', name: 'Link-State Comms', sector: 'Technology' },
+  { symbol: 'OMNI', name: 'Omni-Metrics', sector: 'Technology' },
+  { symbol: 'VCTR', name: 'Vector AI', sector: 'Technology' },
+  { symbol: 'APEX', name: 'Apex Logic', sector: 'Technology' },
+  { symbol: 'ZNTH', name: 'Zenith Ware', sector: 'Technology' },
+  { symbol: 'FUSN', name: 'Fusion Data', sector: 'Technology' },
+  { symbol: 'NRAL', name: 'Neural-Net Labs', sector: 'Technology' },
+  { symbol: 'DGTZ', name: 'Digitize Solutions', sector: 'Technology' },
+  { symbol: 'ALGO', name: 'Algo-Rhythm', sector: 'Technology' },
+  { symbol: 'STRM', name: 'StreamCore', sector: 'Technology' },
+  { symbol: 'ARCA', name: 'Arcane Software', sector: 'Technology' },
+  { symbol: 'CRCL', name: 'Circuitry Inc.', sector: 'Technology' },
+  { symbol: 'TTRN', name: 'Patternica', sector: 'Technology' },
+  { symbol: 'MDLR', name: 'Modular Systems', sector: 'Technology' },
+  { symbol: 'PRSM', name: 'Prism Analytics', sector: 'Technology' },
+  { symbol: 'SPR', name: 'Sphere Virtual', sector: 'Technology' },
+  { symbol: 'INTG', name: 'Integrix', sector: 'Technology' },
+  { symbol: 'FLNT', name: 'Fluent AI', sector: 'Technology' },
+  { symbol: 'LYNX', name: 'Lynx Microsystems', sector: 'Technology' },
+  { symbol: 'ORCL', name: 'Oracle Core', sector: 'Technology' },
+  { symbol: 'PHSE', name: 'Phase Shift', sector: 'Technology' },
+  { symbol: 'RDTN', name: 'Radiant Tech', sector: 'Technology' },
+  { symbol: 'SCPT', name: 'ScriptLogic', sector: 'Technology' },
+  { symbol: 'TNSN', name: 'Tension Networks', sector: 'Technology' },
+  { symbol: 'UNTY', name: 'Unity Base', sector: 'Technology' },
+  { symbol: 'WFRM', name: 'Waveform Digital', sector: 'Technology' },
+  { symbol: 'XNPS', name: 'Synapse Dynamics', sector: 'Technology' },
+  { symbol: 'YGG', name: 'Yggdrasil Computing', sector: 'Technology' },
+  { symbol: 'ZTRX', name: 'Zetrix Solutions', sector: 'Technology' },
+  { symbol: 'TSRT', name: 'Tesseract Systems', sector: 'Technology' },
+  { symbol: 'ATLS', name: 'Atlas AI', sector: 'Technology' },
+  { symbol: 'HIVE', name: 'HiveMind Connect', sector: 'Technology' },
+  { symbol: 'MTRX', name: 'Matrix Labs', sector: 'Technology' },
+  { symbol: 'PRLL', name: 'Parallel Process', sector: 'Technology' },
+  { symbol: 'CBLT', name: 'Cobalt Robotics', sector: 'Technology' },
+  { symbol: 'META', name: 'Meta-Verse Dynamics', sector: 'Technology' },
+  // --- Health Sector (54 new) ---
+  { symbol: 'VTPH', name: 'Vertex Pharma', sector: 'Health' },
+  { symbol: 'CRDL', name: 'CardioLogic', sector: 'Health' },
+  { symbol: 'ONCX', name: 'Onco-X Therapeutics', sector: 'Health' },
+  { symbol: 'SANO', name: 'SanoVita Labs', sector: 'Health' },
+  { symbol: 'CURE', name: 'CureAll Pharma', sector: 'Health' },
+  { symbol: 'HEAL', name: 'HealPoint Diagnostics', sector: 'Health' },
+  { symbol: 'PLSE', name: 'Pulse-Wave Medical', sector: 'Health' },
+  { symbol: 'VTAL', name: 'Vitalis Health', sector: 'Health' },
+  { symbol: 'CLNX', name: 'Clini-Gen', sector: 'Health' },
+  { symbol: 'RJUV', name: 'Rejuva Life Sciences', sector: 'Health' },
+  { symbol: 'ORTH', name: 'Ortho-Solutions', sector: 'Health' },
+  { symbol: 'PDIA', name: 'Pedia-Care Inc.', sector: 'Health' },
+  { symbol: 'DNTL', name: 'Denta-Tech', sector: 'Health' },
+  { symbol: 'OPTI', name: 'Opti-View Systems', sector: 'Health' },
+  { symbol: 'PRCS', name: 'Precision Surgical', sector: 'Health' },
+  { symbol: 'GNCS', name: 'Genecis Corp', sector: 'Health' },
+  { symbol: 'TRNS', name: 'Trans-Medica', sector: 'Health' },
+  { symbol: 'NBLS', name: 'Nebulis Inhalants', sector: 'Health' },
+  { symbol: 'SNTC', name: 'Senti-Tech', sector: 'Health' },
+  { symbol: 'BHWL', name: 'Bio-Wellness', sector: 'Health' },
+  { symbol: 'CTSL', name: 'Catalyst Bio', sector: 'Health' },
+  { symbol: 'DRMA', name: 'Derma-Cure', sector: 'Health' },
+  { symbol: 'ELXR', name: 'Elixir Life', sector: 'Health' },
+  { symbol: 'FLRA', name: 'Flora-Health', sector: 'Health' },
+  { symbol: 'HYGA', name: 'Hygeia Labs', sector: 'Health' },
+  { symbol: 'INFN', name: 'Infin-Gene', sector: 'Health' },
+  { symbol: 'LMNL', name: 'Lumenal Devices', sector: 'Health' },
+  { symbol: 'MCRB', name: 'Micro-Bionics', sector: 'Health' },
+  { symbol: 'NUTR', name: 'Nutri-Gen', sector: 'Health' },
+  { symbol: 'PRTG', name: 'Proteus Medical', sector: 'Health' },
+  { symbol: 'SNTL', name: 'Sentinel Health', sector: 'Health' },
+  { symbol: 'TRMA', name: 'Trauma-Care', sector: 'Health' },
+  { symbol: 'UNVR', name: 'Univer-Salts', sector: 'Health' },
+  { symbol: 'VCTS', name: 'Vectis Diagnostics', sector: 'Health' },
+  { symbol: 'XNTC', name: 'Xenotic Pharma', sector: 'Health' },
+  { symbol: 'ZMRN', name: 'Zym-Renew', sector: 'Health' },
+  { symbol: 'AURA', name: 'Aura-Sense', sector: 'Health' },
+  { symbol: 'CRBR', name: 'Cerebral Dynamics', sector: 'Health' },
+  { symbol: 'DNVA', name: 'Dena-Vita Inc.', sector: 'Health' },
+  { symbol: 'IMPL', name: 'Implanta-Tech', sector: 'Health' },
+  { symbol: 'LNVA', name: 'Longev-A', sector: 'Health' },
+  { symbol: 'MYCO', name: 'Myco-Pharma', sector: 'Health' },
+  { symbol: 'NBLT', name: 'Nebulite', sector: 'Health' },
+  { symbol: 'PULM', name: 'Pulmo-Care', sector: 'Health' },
+  { symbol: 'RNWL', name: 'Renewal Med', sector: 'Health' },
+  { symbol: 'Soma', name: 'Soma-Tech', sector: 'Health' },
+  { symbol: 'TRQN', name: 'Tranquil-Life', sector: 'Health' },
+  { symbol: 'VIVI', name: 'Vivid-Health', sector: 'Health' },
+  { symbol: 'XTND', name: 'Extend-Life', sector: 'Health' },
+  { symbol: 'ALGY', name: 'Alga-Health', sector: 'Health' },
+  { symbol: 'KINE', name: 'Kineti-Care', sector: 'Health' },
+  { symbol: 'NRVE', name: 'Nerve-Gen', sector: 'Health' },
+  { symbol: 'STSK', name: 'Status-K', sector: 'Health' },
+  { symbol: 'ZYGN', name: 'Zygon Health', sector: 'Health' },
+  // --- Energy Sector (54 new) ---
+  { symbol: 'FLUX', name: 'Flux Power Grid', sector: 'Energy' },
+  { symbol: 'ATMO', name: 'Atmo-Sphere Energy', sector: 'Energy' },
+  { symbol: 'TRRA', name: 'Terra-Volt', sector: 'Energy' },
+  { symbol: 'CRYO', name: 'Cryo-Gen', sector: 'Energy' },
+  { symbol: 'PYRO', name: 'Pyro-Source', sector: 'Energy' },
+  { symbol: 'KNTC', name: 'Kinetic Power', sector: 'Energy' },
+  { symbol: 'STTC', name: 'Static Electric', sector: 'Energy' },
+  { symbol: 'WVFR', name: 'Waveform Energy', sector: 'Energy' },
+  { symbol: 'TDAL', name: 'Tidal-Flow', sector: 'Energy' },
+  { symbol: 'SPRK', name: 'Spark Resources', sector: 'Energy' },
+  { symbol: 'PTRL', name: 'Petro-Global', sector: 'Energy' },
+  { symbol: 'BFL', name: 'Bio-Fuel Corp', sector: 'Energy' },
+  { symbol: 'CRBN', name: 'Carbon Capture Co.', sector: 'Energy' },
+  { symbol: 'DRLL', name: 'Drill-Tech', sector: 'Energy' },
+  { symbol: 'ELCT', name: 'Electri-Core', sector: 'Energy' },
+  { symbol: 'FSL', name: 'Fossil Fuels Inc.', sector: 'Energy' },
+  { symbol: 'GTHR', name: 'Geothermal Co.', sector: 'Energy' },
+  { symbol: 'HBR', name: 'Harbor Energy', sector: 'Energy' },
+  { symbol: 'ION', name: 'Ion-Drive', sector: 'Energy' },
+  { symbol: 'JLT', name: 'Jolt Power', sector: 'Energy' },
+  { symbol: 'LMN', name: 'Lumen-Watt', sector: 'Energy' },
+  { symbol: 'MTRN', name: 'Metron Gas', sector: 'Energy' },
+  { symbol: 'NRTH', name: 'North Sea Oil', sector: 'Energy' },
+  { symbol: 'OCEN', name: 'Oceanic Power', sector: 'Energy' },
+  { symbol: 'PPLN', name: 'PipeLine Inc.', sector: 'Energy' },
+  { symbol: 'QSR', name: 'Quasar Energy', sector: 'Energy' },
+  { symbol: 'RFN', name: 'Refine-Co', sector: 'Energy' },
+  { symbol: 'SHLE', name: 'Shale Dynamics', sector: 'Energy' },
+  { symbol: 'TRBN', name: 'Turbine Dynamics', sector: 'Energy' },
+  { symbol: 'VLTA', name: 'Voltaic Systems', sector: 'Energy' },
+  { symbol: 'XTRC', name: 'Extract Energy', sector: 'Energy' },
+  { symbol: 'YTNE', name: 'Yotta-NRG', sector: 'Energy' },
+  { symbol: 'ZENE', name: 'Zenith Energy', sector: 'Energy' },
+  { symbol: 'AMPV', name: 'AmpereVolt', sector: 'Energy' },
+  { symbol: 'CONV', name: 'Converge Power', sector: 'Energy' },
+  { symbol: 'DYNO', name: 'Dyno-Source', sector: 'Energy' },
+  { symbol: 'ETHN', name: 'Ethanol Plus', sector: 'Energy' },
+  { symbol: 'FRAC', name: 'Fracture Oil Co.', sector: 'Energy' },
+  { symbol: 'GIGA', name: 'GigaWatt Storage', sector: 'Energy' },
+  { symbol: 'HELI', name: 'Helios Power', sector: 'Energy' },
+  { symbol: 'INFR', name: 'Infra-Grid Energy', sector: 'Energy' },
+  { symbol: 'KILO', name: 'Kilo-Source', sector: 'Energy' },
+  { symbol: 'LITH', name: 'Lithium Core', sector: 'Energy' },
+  { symbol: 'MEGA', name: 'Mega-Charge', sector: 'Energy' },
+  { symbol: 'NEON', name: 'Neon Gas Co.', sector: 'Energy' },
+  { symbol: 'OPTM', name: 'Optima Fuel', sector: 'Energy' },
+  { symbol: 'PLSM', name: 'Plasma-Drive', sector: 'Energy' },
+  { symbol: 'RDT', name: 'Radiant Heat', sector: 'Energy' },
+  { symbol: 'SONC', name: 'Sonic Energy', sector: 'Energy' },
+  { symbol: 'THRM', name: 'Therma-Gen', sector: 'Energy' },
+  { symbol: 'URAN', name: 'Uranium One', sector: 'Energy' },
+  { symbol: 'VRTX', name: 'Vortex Wind', sector: 'Energy' },
+  { symbol: 'WATT', name: 'Watt-Solutions', sector: 'Energy' },
+  { symbol: 'FUSN', name: 'Fusion Power Co', sector: 'Energy' },
+  // --- Finance Sector (54 new) ---
+  { symbol: 'ACML', name: 'Accumulus Capital', sector: 'Finance' },
+  { symbol: 'BNKR', name: 'BankRight', sector: 'Finance' },
+  { symbol: 'CRDO', name: 'Credo Finance', sector: 'Finance' },
+  { symbol: 'DIVI', name: 'Dividend Trust', sector: 'Finance' },
+  { symbol: 'EQUI', name: 'Equi-Trade', sector: 'Finance' },
+  { symbol: 'FLNT', name: 'Fluent Payments', sector: 'Finance' },
+  { symbol: 'GLBE', name: 'GlobalVest', sector: 'Finance' },
+  { symbol: 'HRBR', name: 'Harbor Holdings', sector: 'Finance' },
+  { symbol: 'IVST', name: 'Investa-Corp', sector: 'Finance' },
+  { symbol: 'JBLT', name: 'Jubilee Trust', sector: 'Finance' },
+  { symbol: 'KNSH', name: 'Kensho Capital', sector: 'Finance' },
+  { symbol: 'LGCY', name: 'Legacy Bank', sector: 'Finance' },
+  { symbol: 'MRKT', name: 'Market-Flow', sector: 'Finance' },
+  { symbol: 'NEXS', name: 'Nexus Capital', sector: 'Finance' },
+  { symbol: 'OPLN', name: 'Opulence Wealth', sector: 'Finance' },
+  { symbol: 'PRSP', name: 'Prosper-Fund', sector: 'Finance' },
+  { symbol: 'QNTF', name: 'Quant-Fi', sector: 'Finance' },
+  { symbol: 'RELY', name: 'Rely-Sure', sector: 'Finance' },
+  { symbol: 'STRL', name: 'Sterling Group', sector: 'Finance' },
+  { symbol: 'TRST', name: 'Trust-Core', sector: 'Finance' },
+  { symbol: 'UNFY', name: 'Unify Financial', sector: 'Finance' },
+  { symbol: 'VLUE', name: 'Value-Base', sector: 'Finance' },
+  { symbol: 'WRTH', name: 'Worth-Well', sector: 'Finance' },
+  { symbol: 'XCHG', name: 'X-Change', sector: 'Finance' },
+  { symbol: 'YLD', name: 'Yield-Stone', sector: 'Finance' },
+  { symbol: 'ZENT', name: 'Zenith Trust', sector: 'Finance' },
+  { symbol: 'AST', name: 'Asset-Wise', sector: 'Finance' },
+  { symbol: 'BETA', name: 'Beta-Vest', sector: 'Finance' },
+  { symbol: 'CMPT', name: 'Compound Capital', sector: 'Finance' },
+  { symbol: 'DLR', name: 'Dollar-Wise', sector: 'Finance' },
+  { symbol: 'FLIO', name: 'Folio-Metrics', sector: 'Finance' },
+  { symbol: 'GRNT', name: 'Guaranty Trust', sector: 'Finance' },
+  { symbol: 'HEDG', name: 'Hedge-Right', sector: 'Finance' },
+  { symbol: 'INCM', name: 'Income-Plus', sector: 'Finance' },
+  { symbol: 'LVRG', name: 'Leverage Co.', sector: 'Finance' },
+  { symbol: 'MNTY', name: 'Moneta Systems', sector: 'Finance' },
+  { symbol: 'NVGT', name: 'Navigate Funds', sector: 'Finance' },
+  { symbol: 'PLCY', name: 'Policy-Sure', sector: 'Finance' },
+  { symbol: 'RTRN', name: 'Return-First', sector: 'Finance' },
+  { symbol: 'SAVY', name: 'Savvy-Invest', sector: 'Finance' },
+  { symbol: 'TNGS', name: 'Tangible Assets', sector: 'Finance' },
+  { symbol: 'UTLY', name: 'Utility Finance', sector: 'Finance' },
+  { symbol: 'VSTA', name: 'Vista Holdings', sector: 'Finance' },
+  { symbol: 'WLTH', name: 'Wealth-Core', sector: 'Finance' },
+  { symbol: 'XFIN', name: 'X-Finance', sector: 'Finance' },
+  { symbol: 'YFIN', name: 'Y-Finance', sector: 'Finance' },
+  { symbol: 'ZFIN', name: 'Z-Finance', sector: 'Finance' },
+  { symbol: 'ALPH', name: 'Alpha-Vest', sector: 'Finance' },
+  { symbol: 'CAP', name: 'Capital-Source', sector: 'Finance' },
+  { symbol: 'EQTY', name: 'Equity-First', sector: 'Finance' },
+  { symbol: 'FND', name: 'Foundation Trust', sector: 'Finance' },
+  { symbol: 'GROW', name: 'Growth-Fund', sector: 'Finance' },
+  { symbol: 'MNGD', name: 'Managed Assets', sector: 'Finance' },
+  // --- Industrials Sector (55 new) ---
+  { symbol: 'AGRM', name: 'Agro-Mechanics', sector: 'Industrials' },
+  { symbol: 'BLST', name: 'Ballisti-Co', sector: 'Industrials' },
+  { symbol: 'CNST', name: 'Construct-X', sector: 'Industrials' },
+  { symbol: 'DFNS', name: 'Defense Dynamics', sector: 'Industrials' },
+  { symbol: 'ELEC', name: 'Elec-Mech', sector: 'Industrials' },
+  { symbol: 'FABR', name: 'Fabri-Corp', sector: 'Industrials' },
+  { symbol: 'GLBL', name: 'Global-Trans', sector: 'Industrials' },
+  { symbol: 'HVAC', name: 'HVAC-Pro', sector: 'Industrials' },
+  { symbol: 'INFR', name: 'Infra-Build', sector: 'Industrials' },
+  { symbol: 'JNT', name: 'Joint-Fab', sector: 'Industrials' },
+  { symbol: 'KNMT', name: 'Kin-Metal', sector: 'Industrials' },
+  { symbol: 'LBRC', name: 'Lubri-Co', sector: 'Industrials' },
+  { symbol: 'MTRL', name: 'Materi-Ex', sector: 'Industrials' },
+  { symbol: 'NVG', name: 'Navi-Gate Logistics', sector: 'Industrials' },
+  { symbol: 'OPRT', name: 'Operate-Right', sector: 'Industrials' },
+  { symbol: 'PMP', name: 'Pump-Works', sector: 'Industrials' },
+  { symbol: 'QSTL', name: 'Quik-Steel', sector: 'Industrials' },
+  { symbol: 'ROTO', name: 'Roto-Works', sector: 'Industrials' },
+  { symbol: 'SHPNG', name: 'Ship-Right', sector: 'Industrials' },
+  { symbol: 'TRBO', name: 'Turbo-Dyne', sector: 'Industrials' },
+  { symbol: 'UTEC', name: 'Util-Tech', sector: 'Industrials' },
+  { symbol: 'VLVE', name: 'Valve-Co', sector: 'Industrials' },
+  { symbol: 'WELD', name: 'Weld-Right', sector: 'Industrials' },
+  { symbol: 'XTRD', name: 'X-Trude', sector: 'Industrials' },
+  { symbol: 'YRD', name: 'Yard-Works', sector: 'Industrials' },
+  { symbol: 'ZNTH', name: 'Zenith Manufacturing', sector: 'Industrials' },
+  { symbol: 'APLY', name: 'Applied Mechanics', sector: 'Industrials' },
+  { symbol: 'BRNG', name: 'Bearing-Co', sector: 'Industrials' },
+  { symbol: 'CRGO', name: 'Cargo-Lift', sector: 'Industrials' },
+  { symbol: 'DURA', name: 'Dura-Frame', sector: 'Industrials' },
+  { symbol: 'ENVR', name: 'Enviro-Solutions', sector: 'Industrials' },
+  { symbol: 'FLTR', name: 'Filter-Pro', sector: 'Industrials' },
+  { symbol: 'GRND', name: 'Grind-Well', sector: 'Industrials' },
+  { symbol: 'HMLT', name: 'Hamlet Machinery', sector: 'Industrials' },
+  { symbol: 'INDM', name: 'Indu-Mech', sector: 'Industrials' },
+  { symbol: 'LOGS', name: 'Logist-X', sector: 'Industrials' },
+  { symbol: 'MOLD', name: 'Mold-Right', sector: 'Industrials' },
+  { symbol: 'NBLD', name: 'Nova-Build', sector: 'Industrials' },
+  { symbol: 'PPR', name: 'Paper-Works', sector: 'Industrials' },
+  { symbol: 'RIVT', name: 'Rivet-Co', sector: 'Industrials' },
+  { symbol: 'SFTY', name: 'Safety-First', sector: 'Industrials' },
+  { symbol: 'TOOL', name: 'Tool-Right', sector: 'Industrials' },
+  { symbol: 'UTIL', name: 'Util-Max', sector: 'Industrials' },
+  { symbol: 'VNT', name: 'Vent-Sys', sector: 'Industrials' },
+  { symbol: 'WRHS', name: 'Ware-House Inc.', sector: 'Industrials' },
+  { symbol: 'XPRT', name: 'X-Port', sector: 'Industrials' },
+  { symbol: 'YACH', name: 'Yacht-Builders', sector: 'Industrials' },
+  { symbol: 'ZINC', name: 'Zinc-Co', sector: 'Industrials' },
+  { symbol: 'CAST', name: 'Cast-Iron Works', sector: 'Industrials' },
+  { symbol: 'DRIL', name: 'Drill-Right', sector: 'Industrials' },
+  { symbol: 'ENGN', name: 'Engi-Pro', sector: 'Industrials' },
+  { symbol: 'FORG', name: 'Forge-Masters', sector: 'Industrials' },
+  { symbol: 'GEAR', name: 'Gear-Works', sector: 'Industrials' },
+  { symbol: 'HVY', name: 'Heavy-Lift', sector: 'Industrials' },
+  { symbol: 'LATH', name: 'Lathe-Masters', sector: 'Industrials' },
 ];
 
-export const MIN_INITIAL_STOCK_PRICE = 5;
-export const MAX_INITIAL_STOCK_PRICE = 10;
-export const INITIAL_HISTORY_LENGTH = 200; // Increased to support 200-day MA
+export const ICONS = {
+    play: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>,
+    pause: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h1a1 1 0 001-1V8a1 1 0 00-1-1H8zm3 0a1 1 0 00-1 1v4a1 1 0 001 1h1a1 1 0 001-1V8a1 1 0 00-1-1h-1z" clipRule="evenodd" /></svg>,
+    reset: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm10.164 9.84a1 1 0 00-1.414-1.414l-1.414 1.414a1 1 0 001.414 1.414l1.414-1.414zM14 16a1 1 0 100 2h- телевизорa1 1 0 100-2h5z" clipRule="evenodd" /></svg>,
+};
+  
+export const SIMULATION_SPEEDS = [
+    { label: '1m/s', steps: 60 },
+    { label: '15m/s', steps: 900 },
+    { label: '30m/s', steps: 1800 },
+    { label: '1h/s', steps: 3600 },
+    { label: '3h/s', steps: 10800 },
+    { label: '12h/s', steps: 43200 },
+    { label: '1d/s', steps: 86400 },
+    { label: '3d/s', steps: 259200 },
+    { label: '1w/s', steps: 604800 },
+];
 
-export const INITIAL_INVESTOR_CASH = 100;
-export const INFLATION_RATE = 0.0005; // Daily inflation rate applied as drift
+export const MIN_INITIAL_STOCK_PRICE = 8;
+export const MAX_INITIAL_STOCK_PRICE = 12;
+export const INITIAL_HISTORY_LENGTH = 252; // Approx 1 year
+export const HUMAN_INITIAL_INVESTOR_CASH = 1_000_000;
+export const AI_INITIAL_INVESTOR_CASH = 100;
+export const INFLATION_RATE = 0.02 / 365; // Daily inflation rate
 
-export const MIN_CORPORATE_ACTION_INTERVAL = 100; // Min days between corporate actions
-export const CORPORATE_ACTION_INTERVAL_RANGE = 50; // Random additional days
-export const MIN_STOCK_SPLIT_PRICE = 150;
-export const MAX_STOCK_SPLIT_PRICE = 300;
-
-export const WASHINGTON_B_AND_O_TAX_RATES_BY_SECTOR: Record<string, number> = {
-    // WA B&O "Service and Other Activities" rate is ~1.5%
-    'Technology': 0.015,
-    'Health': 0.015,
-    'Finance': 0.015,
-    // WA B&O "Manufacturing/Wholesaling" rate is ~0.484%
-    'Energy': 0.00484,
-    'Industrials': 0.00484,
+export const TAX_CONSTANTS = {
+  WASHINGTON_LTCG_RATE: 0.07,
+  WASHINGTON_CG_EXEMPTION: 250000,
+  LONG_TERM_HOLDING_PERIOD: 365, // days
 };
 
+export const WASHINGTON_B_AND_O_TAX_RATES_BY_SECTOR: Record<string, number> = {
+  Technology: 0.00471,
+  Health: 0.00484,
+  Finance: 0.00484,
+  Industrials: 0.00484,
+  Energy: 0.00484,
+  default: 0.00484,
+};
 
-// --- Dynamic AI Neural Network Generation ---
+export const MIN_CORPORATE_ACTION_INTERVAL = 20;
+export const CORPORATE_ACTION_INTERVAL_RANGE = 30;
+export const MIN_STOCK_SPLIT_PRICE = 250;
+export const MAX_STOCK_SPLIT_PRICE = 1000;
 
-const NEURON_POOL = [
-    'momentum_5d', 'momentum_10d', 'momentum_20d', 'momentum_50d',
+export const CORPORATE_EVENTS_BY_SECTOR: Record<string, Record<'positive' | 'negative' | 'neutral', CorporateEventConfig[]>> = {
+  Technology: {
+    positive: [
+      { name: "New Patent Approved", description: "A key patent for a new technology has been approved.", impact: 1.05, type: 'positive' },
+      { name: "Successful AI Launch", description: "A new AI product launch exceeds all sales expectations.", impact: 1.08, type: 'positive' },
+    ],
+    negative: [
+      { name: "Major Data Breach", description: "A significant data breach has compromised user data.", impact: 0.92, type: 'negative' },
+      { name: "Antitrust Lawsuit", description: "Government files an antitrust lawsuit against the company.", impact: 0.90, type: 'negative' },
+    ],
+    neutral: [
+      { name: "Routine Software Update", description: "A routine software update is released.", type: 'neutral' },
+    ],
+  },
+  Health: {
+    positive: [
+      { name: "FDA Approval", description: "A new drug receives full FDA approval.", impact: 1.15, type: 'positive' },
+    ],
+    negative: [
+      { name: "Failed Clinical Trial", description: "A promising drug fails its Phase III clinical trials.", impact: 0.80, type: 'negative' },
+    ],
+    neutral: [
+        { name: "Medical Conference Presentation", description: "Company presents research at a major medical conference.", type: 'neutral' },
+    ]
+  },
+  Energy: {
+      positive: [
+          { name: "New Oil Field Discovery", description: "A massive new oil field is discovered.", impact: 1.10, type: 'positive' },
+      ],
+      negative: [
+          { name: "Oil Spill Incident", description: "An oil spill has caused significant environmental damage.", impact: 0.88, type: 'negative' },
+      ],
+      neutral: [
+          { name: "Routine Maintenance Shutdown", description: "A refinery undergoes scheduled maintenance.", type: 'neutral' },
+      ]
+  },
+  Finance: {
+      positive: [
+          { name: "Positive Earnings Surprise", description: "Quarterly earnings significantly beat analyst expectations.", impact: 1.07, type: 'positive' },
+      ],
+      negative: [
+          { name: "SEC Investigation", description: "The SEC has opened an investigation into the company's accounting practices.", impact: 0.91, type: 'negative' },
+      ],
+      neutral: [
+          { name: "New Branch Opening", description: "A new branch is opened in a major city.", type: 'neutral' },
+      ]
+  },
+  Industrials: {
+      positive: [
+          { name: "Major Government Contract", description: "The company wins a large, multi-year government contract.", impact: 1.09, type: 'positive' },
+      ],
+      negative: [
+          { name: "Factory Worker Strike", description: "Workers at a major factory have gone on strike.", impact: 0.94, type: 'negative' },
+      ],
+      neutral: [
+          { name: "Supply Chain Optimization", description: "Company announces a new supply chain optimization plan.", type: 'neutral' },
+      ]
+  }
+};
+
+export const MACRO_EVENTS: CorporateEventConfig[] = [
+    { name: "Interest Rate Hike", description: "The Federal Reserve unexpectedly raises interest rates.", impact: 0.98, type: 'negative' },
+    { name: "Interest Rate Cut", description: "The Federal Reserve unexpectedly cuts interest rates.", impact: 1.02, type: 'positive' },
+    { name: "Positive Jobs Report", description: "The national jobs report is much stronger than expected.", impact: 1.01, type: 'positive' },
+    { name: "Geopolitical Tensions", description: "New geopolitical tensions flare up overseas.", impact: 0.99, type: 'negative' },
+    { name: "Major Hurricane Forms", description: "A category 5 hurricane is threatening major coastal industrial zones, disrupting shipping and energy production.", impact: 0.985, type: 'disaster' },
+    { name: "Key Trade Deal Signed", description: "A new international trade agreement is signed between major economic blocs, expected to boost exports and reduce tariffs.", impact: 1.015, type: 'political' },
+    { name: "Snap Election Called", description: "A surprise election in a key G7 market introduces significant political uncertainty for the coming months.", impact: 0.99, type: 'political' },
+    { name: "Massive Earthquake Strikes", description: "A powerful 7.8 magnitude earthquake has disrupted supply chains in a critical microchip manufacturing region.", impact: 0.97, type: 'disaster' },
+    { name: "Government Infrastructure Bill", description: "A massive infrastructure spending bill is passed, promising to boost the Industrials and Energy sectors.", impact: 1.02, type: 'political' },
+    { name: "Widespread Flooding", description: "Unprecedented flooding across key agricultural regions is expected to impact food prices and related industries.", impact: 0.99, type: 'disaster' },
+];
+
+export const INDICATOR_NEURONS = [
+    'momentum_5d', 'momentum_10d', 'momentum_20d', 'momentum_50d', 'momentum_1d_vs_avg5d',
     'trend_price_vs_sma_10', 'trend_price_vs_sma_20', 'trend_price_vs_sma_50', 'trend_price_vs_sma_100', 'trend_price_vs_sma_200',
     'trend_sma_crossover_10_20', 'trend_sma_crossover_20_50', 'trend_sma_crossover_50_200',
     'trend_price_vs_ema_10', 'trend_price_vs_ema_20', 'trend_price_vs_ema_50',
     'trend_ema_crossover_10_20', 'trend_ema_crossover_20_50',
     'oscillator_rsi_7_contrarian', 'oscillator_rsi_14_contrarian', 'oscillator_rsi_21_contrarian',
-    'oscillator_stochastic_k_14_contrarian', 'oscillator_stochastic_d_14_contrarian',
-    'oscillator_cci_20_contrarian', 'oscillator_williams_r_14_contrarian',
+    'oscillator_stochastic_k_14_contrarian',
     'volatility_bollinger_bandwidth_20', 'volatility_bollinger_percent_b_20',
-    'volatility_atr_14', 'volatility_historical_20d',
-    'volume_obv_trend_20d', 'volume_cmf_20', 'volume_avg_20d_spike',
-    'macd_histogram', 'macd_divergence_10d'
+    'macd_histogram',
+    'volume_avg_20d_spike', 'volume_obv_trend_20d', 'volume_cmf_20',
+    'volatility_atr_14'
 ];
 
-const NEURON_PREFIX_MAP: Record<string, string> = {
-    'momentum': 'Momentum',
-    'trend': 'Trend',
-    'oscillator': 'Contrarian',
-    'volatility': 'Volatility',
-    'volume': 'Volume',
-    'macd': 'MACD'
+const createNeuralNetwork = (layerSizes: number[], inputNeuronNames: string[]): NeuralNetwork => {
+    // The layer sizes array should start with the number of inputs.
+    return new NeuralNetwork(layerSizes, inputNeuronNames);
 };
 
-const generateStrategyName = (weights: Record<string, number>): string => {
-    const sorted = Object.entries(weights).sort(([, a], [, b]) => Math.abs(b) - Math.abs(a));
-    if (sorted.length === 0) return 'Passive';
-    
-    const primaryNeuron = sorted[0][0];
-    const primaryPrefix = primaryNeuron.split('_')[0];
-    const primaryName = NEURON_PREFIX_MAP[primaryPrefix] || 'Complex';
+const STRATEGY_NAMES = ["Momentum Bot", "Value Seeker", "Quant Algo", "Risk Manager", "Trend Follower", "Contrarian", "Growth Chaser", "Index Follower", "Volatility Trader", "Sector Rotator", "Alpha Hunter"];
 
-    if (sorted.length < 2) return `${primaryName} Focused`;
-
-    const secondaryNeuron = sorted[1][0];
-    const secondaryPrefix = secondaryNeuron.split('_')[0];
-    const secondaryName = NEURON_PREFIX_MAP[secondaryPrefix] || 'Strategy';
-
-    if (primaryName === secondaryName) return `${primaryName} Specialist`;
-    return `${primaryName}-${secondaryName} Hybrid`;
+// Shuffle array in place
+// Fix: Add a trailing comma to the generic type parameter list to disambiguate from a JSX tag for the TSX parser.
+const shuffle = <T,>(array: T[]): T[] => {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
 }
 
-const generateInvestorAI = (id: string, name: string, minNeurons: number, maxNeurons: number, riskRange: [number, number], learningRateRange: [number, number]): InvestorConfig => {
-    const numNeurons = Math.floor(Math.random() * (maxNeurons - minNeurons + 1)) + minNeurons;
-    const shuffledNeurons = [...NEURON_POOL].sort(() => 0.5 - Math.random());
-    const selectedNeurons = shuffledNeurons.slice(0, numNeurons);
-    
-    const weights: Record<string, number> = {};
-    selectedNeurons.forEach(name => {
-        weights[name] = (Math.random() * 2 - 1) * 1.5; // Random weight between -1.5 and 1.5
-    });
-
-    const network: NeuralNetworkWeights = {
-        networkType: 'single-layer',
-        weights: weights,
-    };
-
-    const [minRisk, maxRisk] = riskRange;
-    const [minLR, maxLR] = learningRateRange;
-
-    return {
-        id,
-        name,
-        strategyName: generateStrategyName(weights),
-        strategy: {
-            strategyType: 'hyperComplex',
-            network: network,
-            riskAversion: minRisk + Math.random() * (maxRisk - minRisk),
-            tradeFrequency: Math.random() * 0.4 + 0.1, // Not used in current model, but good for future use
-            learningRate: minLR + Math.random() * (maxLR - minLR),
-        }
-    }
-};
-
-const ELITE_AI_NAMES = [
-    'Nexus Alpha', 'Quantum Blue', 'Momentum Prime', 'Value Core', 
-    'Volatility Edge', 'Trend Rider', 'Contrarian Fund', 'Growth Engine', 'Omega Capital',
-    'Stellar Ascent', 'Apex Dynamics', 'Momentum Machines', 'Vertex Ventures', 'Orion Capital', 
-    'Helios Holdings', 'Zenith Wealth', 'Polaris Partners', 'Crestview Capital', 'Bluechip Bets', 
-    'Phoenix Funds', 'Galactic Growth', 'Titan Traders', 'Elysian Equities', 'Vanguard Vision', 
-    'Sierra Strategies', 'Neptune Navigators', 'Apollo Analytics', 'Meridian Markets', 'Odyssey Ops', 
-    'Cascade Capital', 'Ironclad Investments', 'Summit Seekers', 'Delta Derivatives', 'Alpha Wave', 
-    'Beta Builders', 'Gamma Gains', 'Theta Traders', 'Intrinsic Value', 'Market Mavericks',
-    'Axiom Arbitrage', 'Cygnus Capital', 'Dragonfly Dynamics', 'Echo Equities', 'Fusion Financial',
-    'Griffin Growth', 'Hydra Holdings', 'Infinity Investments', 'Javelin Ventures', 'Kestrel Capital'
-];
-
-const RETAIL_NAME_PREFIXES = [
-    'Quantum', 'Apex', 'Stellar', 'Vertex', 'Orion', 'Helios', 'Zenith', 'Polaris', 'Crestview', 'Phoenix',
-    'Galactic', 'Titan', 'Elysian', 'Vanguard', 'Sierra', 'Neptune', 'Apollo', 'Meridian', 'Odyssey', 'Cascade',
-    'Ironclad', 'Summit', 'Delta', 'Axiom', 'Cygnus', 'Dragonfly', 'Echo', 'Fusion', 'Griffin', 'Hydra',
-    'Infinity', 'Javelin', 'Kestrel', 'Lunar', 'Mystic', 'Nova', 'Omega', 'Pulsar', 'Radiant', 'Solar'
-];
-
-const RETAIL_NAME_SUFFIXES = [
-    'Alpha', 'Blue', 'Prime', 'Core', 'Edge', 'Rider', 'Fund', 'Engine', 'Capital', 'Ascent',
-    'Dynamics', 'Machines', 'Ventures', 'Holdings', 'Wealth', 'Partners', 'Bets', 'Funds', 'Growth', 'Traders',
-    'Equities', 'Vision', 'Strategies', 'Navigators', 'Analytics', 'Markets', 'Ops', 'Investments', 'Seekers', 'Derivatives'
-];
-
-const generateRetailNames = (count: number): string[] => {
-    const names = new Set<string>();
-    while(names.size < count) {
-        const prefix = RETAIL_NAME_PREFIXES[Math.floor(Math.random() * RETAIL_NAME_PREFIXES.length)];
-        const suffix = RETAIL_NAME_SUFFIXES[Math.floor(Math.random() * RETAIL_NAME_SUFFIXES.length)];
-        names.add(`${prefix} ${suffix}`);
-    }
-    return Array.from(names);
-};
-
-
-const HIDDEN_LAYER_SIZE = 5;
-const ADVANCED_AI_COUNT = 12; // Out of 50 elite AIs
-const EXTRA_NEURONS_FOR_ADVANCED_AI = 10;
-const TOTAL_RETAIL_INVESTORS = 250;
-
 export const buildInvestors = (): InvestorConfig[] => {
+    const aiInvestors: InvestorConfig[] = [];
+    const inputLayerSize = INDICATOR_NEURONS.length;
+
+    // 1. Generate 999 base AI investors
+    for (let i = 0; i < 999; i++) {
+        aiInvestors.push({
+            id: `ai-${i + 1}`,
+            name: `AI Trader #${i + 1}`,
+            strategyName: STRATEGY_NAMES[i % STRATEGY_NAMES.length],
+            strategy: {
+                strategyType: 'hyperComplex',
+                network: createNeuralNetwork([inputLayerSize, 10, 5, 1], INDICATOR_NEURONS), // Standard network
+                riskAversion: 0.7 + Math.random() * 1.5, // 0.7 to 2.2
+                tradeFrequency: Math.floor(1 + Math.random() * 14), // 1 to 15
+                learningRate: 0.005 + Math.random() * 0.045 // 0.005 to 0.05
+            }
+        });
+    }
+
+    // 2. Shuffle to pick random investors for upgrades
+    shuffle(aiInvestors);
+
+    // 3. Upgrade Tiers
+    // Tier 2: 10 Advanced Traders
+    for (let i = 0; i < 10; i++) {
+        const investor = aiInvestors[i];
+        investor.name = `Advanced Trader #${i + 1}`;
+        investor.strategyName = "Advanced Quantitative Strategy";
+        const strategy = investor.strategy as HyperComplexInvestorStrategy;
+        strategy.network = createNeuralNetwork([inputLayerSize, 15, 10, 5, 1], INDICATOR_NEURONS);
+        strategy.learningRate *= 1.2; // Slightly faster learner
+        strategy.riskAversion *= 0.9; // Slightly more risk-taking
+    }
+
+    // Tier 3: 5 Elite Traders (from the advanced 10)
+    for (let i = 0; i < 5; i++) {
+        const investor = aiInvestors[i];
+        investor.name = `Elite Trader #${i + 1}`;
+        investor.strategyName = "Elite Deep Learning Fund";
+        const strategy = investor.strategy as HyperComplexInvestorStrategy;
+        strategy.network = createNeuralNetwork([inputLayerSize, 20, 15, 10, 5, 1], INDICATOR_NEURONS);
+        strategy.learningRate *= 1.2;
+        strategy.riskAversion *= 0.9;
+    }
+
+    // Tier 4: 3 Master Traders (from the elite 5)
+    for (let i = 0; i < 3; i++) {
+        const investor = aiInvestors[i];
+        investor.name = `Master Trader #${i + 1}`;
+        investor.strategyName = "Grandmaster Algorithmic Trading";
+        const strategy = investor.strategy as HyperComplexInvestorStrategy;
+        strategy.network = createNeuralNetwork([inputLayerSize, 30, 25, 20, 15, 10, 1], INDICATOR_NEURONS);
+        strategy.learningRate *= 1.2;
+        strategy.riskAversion *= 0.9;
+    }
+
+    // Tier 5: The Oracle (from the master 3)
+    const oracle = aiInvestors[0];
+    oracle.name = "The Oracle";
+    oracle.strategyName = "Singularity Fund";
+    const oracleStrategy = oracle.strategy as HyperComplexInvestorStrategy;
+    // A 7-layer network: 1 input, 5 hidden layers of 50 neurons, 1 output layer
+    oracleStrategy.network = createNeuralNetwork([inputLayerSize, 50, 50, 50, 50, 50, 1], INDICATOR_NEURONS); 
+    oracleStrategy.learningRate = 0.08; // Max learning rate
+    oracleStrategy.riskAversion = 0.4; // Very aggressive
+
+    // 4. Sort by ID to have a consistent order and add Human player
+    aiInvestors.sort((a,b) => parseInt(a.id.split('-')[1]) - parseInt(b.id.split('-')[1]));
+    
     const humanPlayer: InvestorConfig = {
         id: 'human-player',
-        name: 'You',
+        name: 'Human Player',
         isHuman: true,
         strategy: {
-            strategyType: 'simple', priceMomentumWeight: 0, volatilityWeight: 0, riskAversion: 999
+            strategyType: 'hyperComplex',
+            network: createNeuralNetwork([inputLayerSize, 10, 5, 1], INDICATOR_NEURONS), // A base network for consistency
+            riskAversion: 0,
+            tradeFrequency: 0,
+            learningRate: 0
         }
     };
     
-    // --- 1. Create the "Elite" AI Investors (50) ---
-    let eliteInvestors: InvestorConfig[] = ELITE_AI_NAMES.map((name, index) => {
-        const minNeurons = 3 + Math.floor(Math.random() * 5); // 3-7 neurons minimum
-        const maxNeurons = minNeurons + 5 + Math.floor(Math.random() * 10); // More varied max neurons
-        const riskRange: [number, number] = [0.8, 2.5];
-        const learningRateRange: [number, number] = [0.005, 0.02];
-        return generateInvestorAI(`investor-${index + 1}`, name, minNeurons, maxNeurons, riskRange, learningRateRange);
-    });
-
-    // --- 2. Upgrade a portion of Elite AIs to be more advanced ---
-    let shuffledAIs = [...eliteInvestors].sort(() => 0.5 - Math.random());
-    
-    // Upgrade random AIs to a multi-layer network
-    const selectedForMultiLayer = shuffledAIs.slice(0, ADVANCED_AI_COUNT);
-    selectedForMultiLayer.forEach(ai => {
-        const strategy = ai.strategy as HyperComplexInvestorStrategy;
-        if (strategy.network.networkType === 'single-layer') {
-            const currentNeurons = Object.keys(strategy.network.weights);
-            
-            // Add new neurons
-            const availableNewNeurons = NEURON_POOL.filter(n => !currentNeurons.includes(n));
-            const extraNeurons = availableNewNeurons.sort(() => 0.5 - Math.random()).slice(0, EXTRA_NEURONS_FOR_ADVANCED_AI);
-            const allNeuronNames = [...currentNeurons, ...extraNeurons];
-
-            // Create new multi-layer network
-            const weights1: Record<string, number[]> = {};
-            allNeuronNames.forEach(neuronName => {
-                weights1[neuronName] = Array.from({ length: HIDDEN_LAYER_SIZE }, () => (Math.random() * 2 - 1) * 0.5);
-            });
-
-            const weights2: number[] = Array.from({ length: HIDDEN_LAYER_SIZE }, () => (Math.random() * 2 - 1));
-
-            strategy.network = {
-                networkType: 'multi-layer',
-                weights1: weights1,
-                weights2: weights2,
-                hiddenLayerSize: HIDDEN_LAYER_SIZE,
-            };
-
-            ai.strategyName = `Advanced ${ai.strategyName}`;
-        }
-    });
-
-    // Evolve elite AI population: create smartness tiers and a super AI
-    shuffledAIs = [...eliteInvestors].sort(() => 0.5 - Math.random());
-    
-    shuffledAIs.slice(0, 10).forEach(ai => { (ai.strategy as HyperComplexInvestorStrategy).learningRate *= 1.2; });
-    shuffledAIs.slice(10, 15).forEach(ai => { (ai.strategy as HyperComplexInvestorStrategy).learningRate *= 1.4; });
-    shuffledAIs.slice(15, 18).forEach(ai => { (ai.strategy as HyperComplexInvestorStrategy).learningRate *= 1.6; });
-    
-    const superInvestor = shuffledAIs[18];
-    if (superInvestor) {
-        const strategy = superInvestor.strategy as HyperComplexInvestorStrategy;
-        
-        let currentNeurons: string[] = [];
-        if (strategy.network.networkType === 'single-layer') {
-            currentNeurons = Object.keys(strategy.network.weights);
-        } else if (strategy.network.networkType === 'multi-layer') {
-            currentNeurons = Object.keys(strategy.network.weights1);
-        }
-
-        // Add 25 new neurons
-        const availableNewNeurons = NEURON_POOL.filter(n => !currentNeurons.includes(n));
-        const extraNeurons = availableNewNeurons.sort(() => 0.5 - Math.random()).slice(0, 25);
-        const allNeuronNames = [...currentNeurons, ...extraNeurons].filter((v, i, a) => a.indexOf(v) === i); // Ensure unique
-
-        const NUM_HIDDEN_LAYERS = 7;
-        const HIDDEN_LAYER_NODE_COUNT = 5;
-        const layerSizes = [allNeuronNames.length, ...Array(NUM_HIDDEN_LAYERS).fill(HIDDEN_LAYER_NODE_COUNT), 1];
-        const layerWeights: (Record<string, number[]> | number[][])[] = [];
-
-        // Layer 0: Input -> H1
-        const weights_in_h1: Record<string, number[]> = {};
-        allNeuronNames.forEach(neuronName => {
-            weights_in_h1[neuronName] = Array.from({ length: layerSizes[1] }, () => (Math.random() * 2 - 1) * 0.5);
-        });
-        layerWeights.push(weights_in_h1);
-
-        // Hidden layers & Output layer
-        for (let i = 1; i < layerSizes.length - 1; i++) {
-            const fromSize = layerSizes[i];
-            const toSize = layerSizes[i + 1];
-            const weights_h_h: number[][] = Array.from({ length: fromSize }, () => 
-                Array.from({ length: toSize }, () => (Math.random() * 2 - 1) * 0.5)
-            );
-            layerWeights.push(weights_h_h);
-        }
-
-        strategy.network = {
-            networkType: 'deep-layer',
-            inputNeuronNames: allNeuronNames,
-            layerWeights: layerWeights,
-            layerSizes: layerSizes,
-        };
-        superInvestor.strategyName = `Super AI: ${superInvestor.strategyName}`;
-    }
-
-    // --- 3. Create the "Retail Trader" AI Investors (250) ---
-    const retailNames = generateRetailNames(TOTAL_RETAIL_INVESTORS);
-    const retailInvestors: InvestorConfig[] = retailNames.map((name, index) => {
-        // These investors will have simpler neural networks (fewer neurons)
-        // and represent more "average" trading behavior (lower learning rate, higher risk aversion).
-        const minNeurons = 2;
-        const maxNeurons = 6;
-        const riskRange: [number, number] = [1.5, 4.0]; // Generally more risk-averse
-        const learningRateRange: [number, number] = [0.002, 0.01]; // Slower learners
-        return generateInvestorAI(`retail-investor-${index + 1}`, name, minNeurons, maxNeurons, riskRange, learningRateRange);
-    });
-
-
-    return [humanPlayer, ...eliteInvestors, ...retailInvestors];
-};
-
-
-export const CORPORATE_EVENTS_BY_SECTOR: Record<string, { positive: CorporateEventConfig[], negative: CorporateEventConfig[] }> = {
-    'Technology': {
-        positive: [
-            { name: 'Breakthrough AI Chip', description: 'Unveils a new chip, promising a 200% performance boost.', impact: 1.15, type: 'positive' },
-            { name: 'Product Launch Success', description: 'New flagship product receives rave reviews and record pre-orders.', impact: 1.12, type: 'positive' },
-            { name: 'Major Acquisition', description: 'Acquires a promising startup, expanding its market reach.', impact: 1.10, type: 'positive' },
-        ],
-        negative: [
-            { name: 'Major Security Breach', description: 'Reports a massive data breach, compromising user data.', impact: 0.85, type: 'negative' },
-            { name: 'Key Engineer Departs', description: 'Visionary lead engineer unexpectedly resigns.', impact: 0.92, type: 'negative' },
-            { name: 'Product Recall', description: 'A critical flaw forces a recall of its latest product.', impact: 0.88, type: 'negative' },
-        ],
-    },
-    'Health': {
-        positive: [
-            { name: 'FDA Approval', description: 'Receives full FDA approval for its flagship drug.', impact: 1.20, type: 'positive' },
-            { name: 'Breakthrough Research', description: 'Publishes groundbreaking research with huge potential.', impact: 1.13, type: 'positive' },
-            { name: 'Joins Major Health Index', description: 'Stock is added to a prestigious healthcare index.', impact: 1.08, type: 'positive' },
-        ],
-        negative: [
-            { name: 'Clinical Trial Failure', description: 'Phase 3 clinical trials for a key drug have failed.', impact: 0.75, type: 'negative' },
-            { name: 'Patent Expiration', description: 'Loses patent protection on a best-selling treatment.', impact: 0.90, type: 'negative' },
-            { name: 'Unexpected Side Effects', description: 'New reports of severe side effects linked to its product.', impact: 0.87, type: 'negative' },
-        ],
-    },
-    'Energy': {
-        positive: [
-            { name: 'New Efficiency Record', description: 'Achieves a new world record for energy conversion efficiency.', impact: 1.18, type: 'positive' },
-            { name: 'Government Subsidy', description: 'Awarded a major government contract for green energy.', impact: 1.14, type: 'positive' },
-            { name: 'Discovery of New Reserve', description: 'Announces the discovery of a massive new energy reserve.', impact: 1.11, type: 'positive' },
-        ],
-        negative: [
-            { name: 'Environmental Accident', description: 'Responsible for a significant environmental incident.', impact: 0.82, type: 'negative' },
-            { name: 'Regulatory Changes', description: 'New regulations will significantly increase operational costs.', impact: 0.91, type: 'negative' },
-            { name: 'Infrastructure Failure', description: 'A critical piece of infrastructure has failed, halting production.', impact: 0.89, type: 'negative' },
-        ],
-    },
-    'Finance': {
-        positive: [
-            { name: 'Positive Earnings Report', description: 'Reports quarterly earnings far exceeding expectations.', impact: 1.16, type: 'positive' },
-            { name: 'New Fintech Platform', description: 'Launches an innovative new trading platform that goes viral.', impact: 1.12, type: 'positive' },
-            { name: 'Interest Rate Hike', description: 'A surprise interest rate hike is expected to boost profits.', impact: 1.09, type: 'positive' },
-        ],
-        negative: [
-            { name: 'Regulatory Fine', description: 'Hit with a massive fine for regulatory non-compliance.', impact: 0.86, type: 'negative' },
-            { name: 'Credit Rating Downgrade', description: 'Company\'s credit rating is downgraded by a major agency.', impact: 0.90, type: 'negative' },
-            { name: 'Trading System Outage', description: 'A day-long outage costs millions and damages its reputation.', impact: 0.93, type: 'negative' },
-        ],
-    },
-    'Industrials': {
-        positive: [
-            { name: 'Major Infrastructure Contract', description: 'Wins a multi-billion dollar government infrastructure contract.', impact: 1.17, type: 'positive' },
-            { name: 'Robotics Automation Deal', description: 'Signs a deal to automate the factories of a major client.', impact: 1.12, type: 'positive' },
-            { name: 'Supply Chain Innovation', description: 'Develops a new logistics system, cutting costs by 30%.', impact: 1.10, type: 'positive' },
-        ],
-        negative: [
-            { name: 'Union Strikes', description: 'Widespread union strikes have halted all production.', impact: 0.88, type: 'negative' },
-            { name: 'Factory Accident', description: 'A major factory accident leads to costly repairs and lawsuits.', impact: 0.91, type: 'negative' },
-            { name: 'Raw Material Costs Spike', description: 'A global shortage causes a sudden, sharp spike in material costs.', impact: 0.94, type: 'negative' },
-        ],
-    },
-};
-
-export const MACRO_EVENTS = [
-    { 
-        name: 'Global Recession', 
-        description: 'A severe global recession begins, impacting all sectors of the economy.', 
-        type: 'negative',
-        impact: { default: 0.85, Health: 0.95 },
-    },
-    { 
-        name: 'War Breaks Out', 
-        description: 'A major geopolitical conflict erupts, causing market instability and boosting defense-related industries.', 
-        type: 'negative',
-        impact: { default: 0.90, Industrials: 1.15, Energy: 1.10 },
-    },
-    { 
-        name: 'Widespread Famine', 
-        description: 'Global crop failures lead to a widespread famine, disrupting supply chains and consumer spending.', 
-        type: 'negative',
-        impact: { default: 0.88, Industrials: 0.95 },
-    },
-    { 
-        name: 'Technological Boom', 
-        description: 'A wave of innovation sparks a technological boom, lifting markets to new highs.', 
-        type: 'positive',
-        impact: { default: 1.10, Technology: 1.25, Finance: 1.15 },
-    },
-    { 
-        name: 'Global Pandemic', 
-        description: 'A new pandemic sweeps the globe, leading to lockdowns and economic disruption.', 
-        type: 'negative',
-        impact: { default: 0.80, Health: 1.20, Technology: 1.10 },
-    },
-    {
-        name: 'Peace Treaty Signed',
-        description: 'A historic peace treaty is signed, ending a major conflict and boosting global market confidence.',
-        type: 'positive',
-        impact: { default: 1.10, Industrials: 0.90, Energy: 0.95 },
-    },
-    // Political
-    {
-        name: 'Major Trade Deal Signed',
-        description: 'A landmark international trade deal is signed, expected to reduce tariffs and boost exports for key sectors.',
-        type: 'positive',
-        impact: { default: 1.05, Industrials: 1.15, Finance: 1.10 },
-    },
-    {
-        name: 'Major Political Scandal',
-        description: 'A high-level political scandal erupts, creating market uncertainty and shaking investor confidence.',
-        type: 'negative',
-        impact: { default: 0.92, Finance: 0.88 },
-    },
-    {
-        name: 'Election Uncertainty',
-        description: 'A contentious election season creates significant political uncertainty, causing investors to become risk-averse.',
-        type: 'negative',
-        impact: { default: 0.95 },
-    },
-    {
-        name: 'Government Shutdown Looms',
-        description: 'Political gridlock threatens a government shutdown, which could disrupt federal services and economic activity.',
-        type: 'negative',
-        impact: { default: 0.94 },
-    },
-    // Natural Disasters
-    {
-        name: 'Massive Hurricane',
-        description: 'A category 5 hurricane makes landfall, causing widespread damage to infrastructure and disrupting supply chains.',
-        type: 'negative',
-        impact: { default: 0.90, Industrials: 0.85, Energy: 0.82 },
-    },
-    {
-        name: 'Major Earthquake',
-        description: 'A powerful earthquake strikes a major economic hub, crippling infrastructure and causing significant insurance losses.',
-        type: 'negative',
-        impact: { default: 0.92, Industrials: 0.88, Finance: 0.85 },
-    },
-    {
-        name: 'Widespread Wildfires',
-        description: 'Uncontrolled wildfires burn across vast areas, impacting agriculture, logistics, and causing economic disruption.',
-        type: 'negative',
-        impact: { default: 0.96, Industrials: 0.92 },
-    },
-];
-
-
-export const SIMULATION_SPEEDS = [
-    { label: 'Real-time', steps: 1 },
-    { label: '1 min/s', steps: 60 },
-    { label: '15 min/s', steps: 900 },
-    { label: '1 hour/s', steps: 3600 },
-    { label: '12 hour/s', steps: 43200 },
-    { label: '1 day/s', steps: 86400 },
-    { label: '3 day/s', steps: 259200 },
-    { label: '1 week/s', steps: 604800 },
-];
-
-export const TAX_CONSTANTS = {
-    LONG_TERM_HOLDING_PERIOD: 365, // days
-    FEDERAL_LTCG_RATE: 0.15,
-    WASHINGTON_LTCG_RATE: 0.07,
-    WASHINGTON_CG_EXEMPTION: 262000, // For tax year 2023. This is the standard deduction.
-    FEDERAL_STCG_BRACKETS: [
-      { threshold: 1000, rate: 0.10 },
-      { threshold: 5000, rate: 0.20 },
-      { threshold: Infinity, rate: 0.30 },
-    ],
-  };
-
-export const ICONS = {
-    play: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>,
-    pause: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6" /></svg>,
-    reset: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5m-1 5a9 9 0 110-18 9 9 0 010 18z" /></svg>,
+    return [humanPlayer, ...aiInvestors];
 };

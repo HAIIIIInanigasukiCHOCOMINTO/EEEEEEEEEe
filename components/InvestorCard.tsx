@@ -44,43 +44,12 @@ const InvestorCard: React.FC<InvestorCardProps> = ({ investor, stocks, isHuman }
   ];
 
   const strategy = investor.strategy as HyperComplexInvestorStrategy;
-
-  const multiLayerVisuals = useMemo(() => {
-    if (strategy.strategyType === 'hyperComplex' && strategy.network.networkType === 'multi-layer') {
-        const avgInputWeights: Record<string, number> = {};
-        for (const neuronName in strategy.network.weights1) {
-            const weights = strategy.network.weights1[neuronName];
-            avgInputWeights[neuronName] = weights.reduce((sum, w) => sum + Math.abs(w), 0) / weights.length;
-        }
-        
-        const hiddenLayerWeights: Record<string, number> = {};
-        strategy.network.weights2.forEach((weight, i) => {
-            hiddenLayerWeights[`hidden_${i + 1}`] = weight;
-        });
-
-        return { avgInputWeights, hiddenLayerWeights };
-    }
-    return null;
-  }, [strategy]);
   
   const deepNetworkVisuals = useMemo(() => {
-    if (strategy.strategyType === 'hyperComplex' && strategy.network.networkType === 'deep-layer') {
-        const network = strategy.network;
-        // Input -> H1 Weights (Average Strength)
-        const inputToH1Weights: Record<string, number> = {};
-        const inputWeights = network.layerWeights[0] as Record<string, number[]>;
-        for(const neuronName in inputWeights) {
-            const weights = inputWeights[neuronName];
-            inputToH1Weights[neuronName] = weights.reduce((sum, w) => sum + Math.abs(w), 0) / weights.length;
-        }
-
-        // H_last -> Output Weights
-        const lastHiddenToOutputWeights: Record<string, number> = {};
-        const lastHiddenLayerIdx = network.layerWeights.length - 1;
-        const lastWeights = network.layerWeights[lastHiddenLayerIdx] as number[][];
-        lastWeights.forEach((weights, i) => {
-            lastHiddenToOutputWeights[`H${network.layerSizes.length - 2}_${i+1}`] = weights[0];
-        });
+    if (strategy.strategyType === 'hyperComplex' && strategy.network) {
+        // The network class provides visualization-friendly data directly
+        const inputToH1Weights = strategy.network.getInputLayerWeights ? strategy.network.getInputLayerWeights() : {};
+        const lastHiddenToOutputWeights = strategy.network.getOutputLayerWeights ? strategy.network.getOutputLayerWeights() : {};
         
         return { inputToH1Weights, lastHiddenToOutputWeights };
     }
@@ -130,24 +99,13 @@ const InvestorCard: React.FC<InvestorCardProps> = ({ investor, stocks, isHuman }
         </div>
       </div>
 
-      {!isHuman && strategy.strategyType === 'hyperComplex' && (
+      {!isHuman && strategy.strategyType === 'hyperComplex' && strategy.network && deepNetworkVisuals && (
         <div className="mt-2 pt-2 border-t border-gray-700 space-y-2">
-            {strategy.network.networkType === 'single-layer' && (
-                 <NeuralNetworkVisualizer title="AI Trading Logic" weights={strategy.network.weights} />
-            )}
-            {strategy.network.networkType === 'multi-layer' && multiLayerVisuals && (
-                <>
-                    <NeuralNetworkVisualizer title="Input ➔ Hidden (Avg. Strength)" weights={multiLayerVisuals.avgInputWeights} />
-                    <NeuralNetworkVisualizer title="Hidden ➔ Output" weights={multiLayerVisuals.hiddenLayerWeights} />
-                </>
-            )}
-             {strategy.network.networkType === 'deep-layer' && deepNetworkVisuals && (
-                <>
-                    <p className="text-xs text-center font-bold text-accent/80 -mb-1">Deep Network ({strategy.network.layerSizes.length - 2} Hidden Layers)</p>
-                    <NeuralNetworkVisualizer title="Input ➔ H1 (Avg. Strength)" weights={deepNetworkVisuals.inputToH1Weights} />
-                    <NeuralNetworkVisualizer title={`H${strategy.network.layerSizes.length - 2} ➔ Output`} weights={deepNetworkVisuals.lastHiddenToOutputWeights} />
-                </>
-            )}
+             <p className="text-xs text-center font-bold text-accent/80 -mb-1">Deep Network ({strategy.network.layerSizes.length - 2} Hidden Layers)</p>
+             <NeuralNetworkVisualizer title="Input ➔ H1 (Avg. Strength)" weights={deepNetworkVisuals.inputToH1Weights} />
+             {Object.keys(deepNetworkVisuals.lastHiddenToOutputWeights).length > 0 && 
+                <NeuralNetworkVisualizer title={`H${strategy.network.layerSizes.length - 2} ➔ Output`} weights={deepNetworkVisuals.lastHiddenToOutputWeights} />
+             }
         </div>
       )}
 

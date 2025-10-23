@@ -34,7 +34,7 @@ const StockListItem: React.FC<StockListItemProps> = ({ stock, onSelect }) => {
   return (
     <div 
       onClick={() => onSelect(stock.symbol)}
-      className="grid grid-cols-12 gap-4 items-center px-4 py-3 border-b border-gray-700 last:border-b-0 hover:bg-gray-900/75 cursor-pointer transition-colors duration-150 text-sm"
+      className="grid grid-cols-12 gap-2 items-center px-4 py-3 border-b border-gray-700 last:border-b-0 hover:bg-gray-900/75 cursor-pointer transition-colors duration-150 text-sm"
     >
       <div className="col-span-3 truncate">
         <p className="font-bold text-gray-200">{stock.symbol}</p>

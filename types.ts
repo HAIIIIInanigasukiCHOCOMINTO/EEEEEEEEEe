@@ -1,4 +1,6 @@
 import React from 'react';
+import { NeuralNetwork } from './services/neuralNetwork';
+
 // A simple data point for charts that only need a single value over time (e.g., market index, portfolio value).
 export interface SimplePriceDataPoint {
   day: number;
@@ -17,11 +19,9 @@ export interface OHLCDataPoint {
 
 export interface CorporateAI {
     nextCorporateActionDay: number;
-    weights: {
-        split: Record<string, number>;
-        alliance: Record<string, number>;
-        acquisition: Record<string, number>;
-    };
+    splitNN: NeuralNetwork;
+    allianceNN: NeuralNetwork;
+    acquisitionNN: NeuralNetwork;
     learningRate: number;
 }
 
@@ -69,23 +69,10 @@ export interface ComplexInvestorStrategy {
     tradeFrequency: number;
 }
 
-// Definition for the AI's neural network structure
-export type NeuralNetworkWeights = 
-  { networkType: 'single-layer', weights: Record<string, number> } |
-  { networkType: 'multi-layer', weights1: Record<string, number[]>, weights2: number[], hiddenLayerSize: number } |
-  { networkType: 'deep-layer', 
-    inputNeuronNames: string[],
-    // layerWeights[0] is Record<string, number[]> for input->h1
-    // layerWeights[1...n] are number[][] for hidden->hidden and hidden->output
-    layerWeights: (Record<string, number[]> | number[][])[], 
-    layerSizes: number[] 
-  };
-
-
-// Tier 3 AI: Hyper-complex, uses many advanced indicators
+// Tier 3 AI: Hyper-complex, uses a real neural network
 export interface HyperComplexInvestorStrategy {
     strategyType: 'hyperComplex';
-    network: NeuralNetworkWeights;
+    network: NeuralNetwork;
     riskAversion: number;
     tradeFrequency: number;
     learningRate: number;
@@ -103,8 +90,7 @@ export interface RecentTrade {
     type: 'buy' | 'sell';
     shares: number;
     price: number;
-    indicatorsAtTrade: Record<string, number>;
-    activationsAtTrade?: (number[] | Record<string, number>)[]; // For multi/deep networks
+    indicatorValuesAtTrade: number[]; // Stored as an ordered array for backpropagation
     outcomeEvaluationDay: number;
 }
 
@@ -133,8 +119,9 @@ export interface ActiveEvent {
     headline: string; // The generated, catchy headline
     summary: string; // A short, generated summary for cards
     fullText: string; // The full, generated article text
-    type: 'positive' | 'negative' | 'neutral' | 'split' | 'alliance' | 'merger';
-    impact: number | Record<string, number>;
+    // Fix: Expanded type to include 'political' and 'disaster' to match usage in services, resolving comparison errors.
+    type: 'positive' | 'negative' | 'neutral' | 'split' | 'alliance' | 'merger' | 'political' | 'disaster';
+    impact?: number | Record<string, number>; // Made optional for neutral/descriptive events
     imageUrl?: string;
     splitDetails?: { symbol: string; ratio: number; };
     allianceDetails?: { partners: [string, string]; };
@@ -145,8 +132,8 @@ export interface TrackedCorporateAction {
     startDay: number;
     evaluationDay: number;
     stockSymbol: string;
-    actionType: 'alliance' | 'acquisition';
-    neuronValuesAtAction: Record<string, number>;
+    actionType: 'alliance' | 'acquisition' | 'split';
+    indicatorValuesAtAction: number[]; // Stored as an ordered array for backpropagation
     startingStockPrice: number;
     startingMarketIndex: number;
 }
@@ -157,8 +144,8 @@ export interface SimulationState {
   startDate: string; // ISO string for the start date of the simulation
   stocks: Stock[];
   investors: Investor[];
-  activeEvent: ActiveEvent | null;
-  eventHistory: ActiveEvent[];
+  activeEvent: ActiveEvent | null; // This will hold the "featured" or most significant event
+  eventHistory: ActiveEvent[]; // This will hold all recent events, including minor ones
   marketIndexHistory: SimplePriceDataPoint[];
   nextCorporateEventDay: number;
   nextMacroEventDay: number;
